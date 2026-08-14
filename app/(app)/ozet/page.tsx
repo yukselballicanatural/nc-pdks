@@ -5,6 +5,11 @@ import { summary } from "@/lib/engine/summary";
 import { addDays, dateOnly } from "@/lib/engine/mesaiGunu";
 import type { Correction } from "@/lib/engine/summary";
 
+// Bu sayfa her istekte canlı Supabase verisi çekiyor — build sırasında statik
+// olarak önceden üretilmeye çalışılmamalı (aksi halde build-time'da env/DB
+// erişimi gerekir ve prerender hatası verir).
+export const dynamic = "force-dynamic";
+
 // Şimdilik herkes gündüz vardiyası kabul ediliyor (kullanıcı kararı — vardiya
 // verisi henüz Supabase'e eklenmedi, eklendiğinde isGece burada güncellenecek).
 const isGeceStub = () => false;
