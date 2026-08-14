@@ -42,33 +42,74 @@ export default function MolaTable({ rows }: { rows: MolaRow[] }) {
   );
 
   const columns: Column<MolaRow>[] = [
-    { key: "adSoyad", header: "Kişi", cell: (r) => <span className="font-medium">{r.adSoyad}</span>, sortValue: (r) => r.adSoyad },
-    { key: "tarih", header: "Tarih", cell: (r) => r.tarih, sortValue: (r) => r.tarih.split(".").reverse().join("-") },
-    { key: "tl", header: "Takım Lideri", cell: (r) => <span className="text-slate-500">{r.takimLideri}</span>, sortValue: (r) => r.takimLideri },
-    { key: "net", header: "Turnike İçi", align: "right", cell: (r) => dkp(r.net), sortValue: (r) => r.net },
+    {
+      key: "adSoyad",
+      header: "Kişi",
+      cell: (r) => <span className="font-medium">{r.adSoyad}</span>,
+      sortValue: (r) => r.adSoyad,
+    },
+    {
+      key: "tarih",
+      header: "Tarih",
+      cell: (r) => r.tarih,
+      sortValue: (r) => r.tarih.split(".").reverse().join("-"),
+    },
+    {
+      key: "tl",
+      header: "Takım Lideri",
+      cell: (r) => <span style={{ color: "var(--tx-muted)" }}>{r.takimLideri}</span>,
+      sortValue: (r) => r.takimLideri,
+    },
+    {
+      key: "net",
+      header: "Turnike İçi",
+      align: "right",
+      cell: (r) => dkp(r.net),
+      sortValue: (r) => r.net,
+    },
     {
       key: "mola",
       header: "Turnike Dışı",
       align: "right",
-      cell: (r) => <span className={r.mola > 120 ? "font-medium text-amber-300" : "text-slate-400"}>{dkp(r.mola)}</span>,
+      cell: (r) => (
+        <span
+          className={r.mola > 120 ? "font-semibold" : ""}
+          style={{ color: r.mola > 120 ? "var(--cl-warn)" : "var(--tx-secondary)" }}
+        >
+          {dkp(r.mola)}
+        </span>
+      ),
       sortValue: (r) => r.mola,
     },
-    { key: "toplam", header: "Toplam", align: "right", cell: (r) => <span className="text-slate-400">{dkp(r.toplam)}</span>, sortValue: (r) => r.toplam },
+    {
+      key: "toplam",
+      header: "Toplam",
+      align: "right",
+      cell: (r) => <span style={{ color: "var(--tx-secondary)" }}>{dkp(r.toplam)}</span>,
+      sortValue: (r) => r.toplam,
+    },
     {
       key: "diger",
       header: "Diğer Okuyucu Süresi",
       align: "right",
-      cell: (r) => (r.digerDakika > 0 ? <span className="text-slate-400">{dkp(r.digerDakika)}</span> : <span className="text-slate-600">-</span>),
+      cell: (r) =>
+        r.digerDakika > 0 ? (
+          <span style={{ color: "var(--tx-secondary)" }}>{dkp(r.digerDakika)}</span>
+        ) : (
+          <span style={{ color: "var(--tx-disabled)" }}>-</span>
+        ),
       sortValue: (r) => r.digerDakika,
     },
     {
       key: "ozet",
       header: "Dışarıda Kalınan Aralıklar",
       cell: (r) => (
-        <span className="text-xs text-slate-400">
+        <span className="text-xs" style={{ color: "var(--tx-secondary)" }}>
           {r.molaAraliklari.slice(0, 3).join(" · ") || "-"}
           {r.molaAraliklari.length > 3 && (
-            <span className="text-slate-600"> +{r.molaAraliklari.length - 3} aralık</span>
+            <span style={{ color: "var(--tx-muted)" }}>
+              {" "}+{r.molaAraliklari.length - 3} aralık
+            </span>
           )}
         </span>
       ),
@@ -77,7 +118,7 @@ export default function MolaTable({ rows }: { rows: MolaRow[] }) {
 
   return (
     <>
-      <p className="mb-3 text-xs text-slate-500">
+      <p className="mb-3 text-xs" style={{ color: "var(--tx-muted)" }}>
         ☕ Turnike dışı geçen süre = brüt - net. Satıra tıkla = o günün tüm çalışma/mola aralıkları.
         2 saati aşan molalar sarı gösterilir.
       </p>
@@ -96,49 +137,96 @@ export default function MolaTable({ rows }: { rows: MolaRow[] }) {
         pageSize={200}
       />
 
+      {/* Modal */}
       {detay && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setDetay(null)}>
+        <div
+          className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
+          onClick={() => setDetay(null)}
+        >
           <div
-            className="max-h-[85vh] w-full max-w-xl overflow-y-auto rounded-lg border border-slate-700 bg-slate-900 p-5"
+            className="modal-panel glass-modal relative max-h-[85vh] w-full max-w-xl overflow-y-auto p-6"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="text-lg font-semibold">{detay.adSoyad}</div>
-            <div className="mb-4 text-sm text-slate-400">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 top-0 h-px rounded-t-[18px]"
+              style={{
+                background:
+                  "linear-gradient(90deg, transparent, rgba(6,214,160,0.5) 50%, transparent)",
+              }}
+            />
+
+            <div className="text-lg font-semibold" style={{ color: "var(--tx-primary)" }}>
+              {detay.adSoyad}
+            </div>
+            <div className="mb-5 text-sm" style={{ color: "var(--tx-secondary)" }}>
               {detay.tarih} · {detay.vardiya} · Turnike içi {dkp(detay.net)} / dışı {dkp(detay.mola)}
             </div>
 
-            <div className="mb-2 text-sm font-medium text-emerald-300">
+            {/* Çalışma aralıkları */}
+            <div className="mb-2 text-sm font-semibold" style={{ color: "var(--cl-ok)" }}>
               Turnike İçi Çalışma Aralıkları ({detay.calismaAraliklari.length})
             </div>
-            <ul className="mb-4 space-y-1 text-sm">
+            <ul className="mb-5 space-y-1 text-sm">
               {detay.calismaAraliklari.map((a, i) => (
-                <li key={i} className="rounded bg-emerald-500/5 px-2 py-1 tabular-nums">
+                <li
+                  key={i}
+                  className="rounded-lg px-3 py-1.5 tabular-nums"
+                  style={{
+                    background: "rgba(52,211,153,0.06)",
+                    border: "1px solid rgba(52,211,153,0.12)",
+                    color: "var(--tx-primary)",
+                  }}
+                >
                   {a}
                 </li>
               ))}
-              {detay.calismaAraliklari.length === 0 && <li className="text-slate-600">Yok</li>}
+              {detay.calismaAraliklari.length === 0 && (
+                <li style={{ color: "var(--tx-disabled)" }}>Yok</li>
+              )}
             </ul>
 
-            <div className="mb-2 text-sm font-medium text-amber-300">
+            {/* Mola aralıkları */}
+            <div className="mb-2 text-sm font-semibold" style={{ color: "var(--cl-warn)" }}>
               Turnike Dışında Kalınan Aralıklar ({detay.molaAraliklari.length})
             </div>
-            <ul className="mb-4 space-y-1 text-sm">
+            <ul className="mb-5 space-y-1 text-sm">
               {detay.molaAraliklari.map((a, i) => (
-                <li key={i} className="rounded bg-amber-500/5 px-2 py-1 tabular-nums">
+                <li
+                  key={i}
+                  className="rounded-lg px-3 py-1.5 tabular-nums"
+                  style={{
+                    background: "rgba(251,191,36,0.06)",
+                    border: "1px solid rgba(251,191,36,0.12)",
+                    color: "var(--tx-primary)",
+                  }}
+                >
                   {a}
                 </li>
               ))}
-              {detay.molaAraliklari.length === 0 && <li className="text-slate-600">Yok</li>}
+              {detay.molaAraliklari.length === 0 && (
+                <li style={{ color: "var(--tx-disabled)" }}>Yok</li>
+              )}
             </ul>
 
+            {/* Diğer okuyucular */}
             {detay.digerOkuyucular.length > 0 && (
               <>
-                <div className="mb-2 text-sm font-medium text-slate-300">
+                <div className="mb-2 text-sm font-semibold" style={{ color: "var(--tx-primary)" }}>
                   Turnike Dışı Okutulan Okuyucular
                 </div>
-                <div className="mb-4 flex flex-wrap gap-1">
+                <div className="mb-5 flex flex-wrap gap-1.5">
                   {detay.digerOkuyucular.map((o) => (
-                    <span key={o} className="rounded bg-slate-800 px-1.5 py-0.5 text-xs text-slate-300">
+                    <span
+                      key={o}
+                      className="rounded-lg px-2 py-0.5 text-xs"
+                      style={{
+                        background: "rgba(255,255,255,0.06)",
+                        border: "1px solid rgba(255,255,255,0.1)",
+                        color: "var(--tx-secondary)",
+                      }}
+                    >
                       {o}
                     </span>
                   ))}
@@ -148,7 +236,12 @@ export default function MolaTable({ rows }: { rows: MolaRow[] }) {
 
             <button
               onClick={() => setDetay(null)}
-              className="w-full rounded-md border border-slate-700 py-1.5 text-sm text-slate-400 hover:bg-slate-800"
+              className="w-full rounded-xl py-2 text-sm transition-all duration-150"
+              style={{
+                background: "rgba(255,255,255,0.05)",
+                border: "1px solid rgba(255,255,255,0.1)",
+                color: "var(--tx-secondary)",
+              }}
             >
               Kapat
             </button>

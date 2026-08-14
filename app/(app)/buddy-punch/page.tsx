@@ -1,5 +1,5 @@
 import { loadPdksData } from "@/lib/data/loadPdks";
-import { formatGs, formatHms, mesaiGunu } from "@/lib/engine/mesaiGunu";
+import { formatGs, formatHms } from "@/lib/engine/mesaiGunu";
 import { readerDirection } from "@/lib/engine/textNorm";
 import PageHeader from "@/components/ui/PageHeader";
 import StatCard from "@/components/ui/StatCard";
@@ -16,23 +16,16 @@ export default async function BuddyPunchPage({
 }) {
   const sp = await searchParams;
   const data = await loadPdksData(sp);
-  const { range, events, personByS, readerConfig, isGece, buddyIdx, tlFilter } = data;
+  const { range, personByS, readerConfig, buddy, tlFilter } = data;
 
-  const rows: LogRow[] = buddyIdx
-    .map((idx) => events[idx])
-    .filter((r): r is (typeof events)[number] => Boolean(r))
-    .filter((r) => {
-      const mg = mesaiGunu(r.dt, isGece(r.sicil));
-      if (mg < range.sd || mg > range.ed) return false;
-      if (tlFilter && personByS.get(r.sicil)?.takimLideri !== tlFilter) return false;
-      return true;
-    })
-    .map((r) => {
+  const rows: LogRow[] = buddy
+    .filter((r) => !tlFilter || personByS.get(r.sicil)?.takimLideri === tlFilter)
+    .map((r, i) => {
       const p = personByS.get(r.sicil);
       const dir = readerDirection(r.ok);
       return {
-        key: `${r.idx}`,
-        tarih: formatGs(mesaiGunu(r.dt, isGece(r.sicil))),
+        key: `${r.sicil}-${r.dt.getTime()}-${i}`,
+        tarih: formatGs(r.mg),
         saat: formatHms(r.dt),
         okuyucu: r.ok,
         alan: ALAN_ADI[readerConfig.getArea(r.ok)],

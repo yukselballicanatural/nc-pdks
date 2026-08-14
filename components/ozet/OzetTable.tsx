@@ -53,7 +53,7 @@ export default function OzetTable({ rows }: { rows: OzetRow[] }) {
       key: "sicil",
       header: "Sicil",
       width: "70px",
-      cell: (r) => <span className="text-slate-500">{r.sicil}</span>,
+      cell: (r) => <span style={{ color: "var(--tx-muted)" }}>{r.sicil}</span>,
       sortValue: (r) => Number(r.sicil) || r.sicil,
     },
     {
@@ -66,7 +66,7 @@ export default function OzetTable({ rows }: { rows: OzetRow[] }) {
       key: "tl",
       header: "Takım Lideri",
       cell: (r) => (
-        <span className={r.takimLideri === "Bilinmiyor" ? "text-red-400" : "text-slate-400"}>
+        <span style={{ color: r.takimLideri === "Bilinmiyor" ? "var(--cl-danger)" : "var(--tx-secondary)" }}>
           {r.takimLideri}
         </span>
       ),
@@ -77,7 +77,7 @@ export default function OzetTable({ rows }: { rows: OzetRow[] }) {
       header: "Vardiya",
       align: "center",
       cell: (r) => (
-        <span className={r.vardiya === "GECE" ? "text-violet-300" : "text-amber-300"}>
+        <span style={{ color: r.vardiya === "GECE" ? "var(--cl-violet)" : "var(--cl-warn)" }}>
           {r.vardiya === "GECE" ? "Gece" : "Gündüz"}
         </span>
       ),
@@ -89,9 +89,9 @@ export default function OzetTable({ rows }: { rows: OzetRow[] }) {
       align: "center",
       cell: (r) => (
         <span>
-          <span className="text-slate-400">{r.gerekenGun}</span>
-          <span className="text-slate-600"> / </span>
-          <span className={r.gelinenGun < r.gerekenGun ? "text-red-400" : "text-emerald-400"}>
+          <span style={{ color: "var(--tx-secondary)" }}>{r.gerekenGun}</span>
+          <span style={{ color: "var(--tx-disabled)" }}> / </span>
+          <span style={{ color: r.gelinenGun < r.gerekenGun ? "var(--cl-danger)" : "var(--cl-ok)" }}>
             {r.gelinenGun}
           </span>
         </span>
@@ -109,21 +109,21 @@ export default function OzetTable({ rows }: { rows: OzetRow[] }) {
       key: "mola",
       header: "Turnike Dışı",
       align: "right",
-      cell: (r) => <span className="text-slate-400">{dkp(r.turnikeDisi)}</span>,
+      cell: (r) => <span style={{ color: "var(--tx-secondary)" }}>{dkp(r.turnikeDisi)}</span>,
       sortValue: (r) => r.turnikeDisi,
     },
     {
       key: "brut",
       header: "Toplam Süre",
       align: "right",
-      cell: (r) => <span className="text-slate-400">{dkp(r.toplamSure)}</span>,
+      cell: (r) => <span style={{ color: "var(--tx-secondary)" }}>{dkp(r.toplamSure)}</span>,
       sortValue: (r) => r.toplamSure,
     },
     {
       key: "bek",
       header: "Beklenen Net",
       align: "right",
-      cell: (r) => <span className="text-slate-500">{dkp(r.beklenenNet)}</span>,
+      cell: (r) => <span style={{ color: "var(--tx-muted)" }}>{dkp(r.beklenenNet)}</span>,
       sortValue: (r) => r.beklenenNet,
     },
     {
@@ -131,7 +131,10 @@ export default function OzetTable({ rows }: { rows: OzetRow[] }) {
       header: "Net Fark",
       align: "right",
       cell: (r) => (
-        <span className={r.netFark < 0 ? "font-medium text-red-400" : "font-medium text-emerald-400"}>
+        <span
+          className="font-semibold"
+          style={{ color: r.netFark < 0 ? "var(--cl-danger)" : "var(--cl-ok)" }}
+        >
           {dks(r.netFark)}
         </span>
       ),
@@ -141,7 +144,12 @@ export default function OzetTable({ rows }: { rows: OzetRow[] }) {
       key: "hafta",
       header: "Cmt/Paz",
       align: "right",
-      cell: (r) => (r.hafta > 0 ? <span className="text-amber-300">{dkp(r.hafta)}</span> : <span className="text-slate-600">-</span>),
+      cell: (r) =>
+        r.hafta > 0 ? (
+          <span style={{ color: "var(--cl-warn)" }}>{dkp(r.hafta)}</span>
+        ) : (
+          <span style={{ color: "var(--tx-disabled)" }}>-</span>
+        ),
       sortValue: (r) => r.hafta,
     },
     {
@@ -151,17 +159,36 @@ export default function OzetTable({ rows }: { rows: OzetRow[] }) {
       cell: (r) =>
         r.turnikeKaydi === 0 ? (
           <span
-            className="rounded bg-slate-700/50 px-1.5 py-0.5 text-xs text-slate-400"
+            className="rounded-full px-2 py-0.5 text-xs"
+            style={{
+              background: "rgba(255,255,255,0.06)",
+              color: "var(--tx-secondary)",
+            }}
             title="Bu kişinin dönemde hiç turnike kaydı yok — turnike dışı kapıları kullanıyor, bu yüzden turnike bazlı çalışma süresi hesaplanamaz."
           >
             Turnike kaydı yok
           </span>
         ) : r.gelinenGun === 0 ? (
-          <span className="rounded bg-red-500/15 px-1.5 py-0.5 text-xs text-red-300">Hiç gelmemiş</span>
+          <span
+            className="rounded-full px-2 py-0.5 text-xs font-medium"
+            style={{ background: "var(--cl-danger-dim)", color: "var(--cl-danger)" }}
+          >
+            Hiç gelmemiş
+          </span>
         ) : r.netFark < 0 ? (
-          <span className="rounded bg-red-500/10 px-1.5 py-0.5 text-xs text-red-300">Eksik</span>
+          <span
+            className="rounded-full px-2 py-0.5 text-xs font-medium"
+            style={{ background: "var(--cl-danger-dim)", color: "var(--cl-danger)" }}
+          >
+            Eksik
+          </span>
         ) : (
-          <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-xs text-emerald-300">Tamam</span>
+          <span
+            className="rounded-full px-2 py-0.5 text-xs font-medium"
+            style={{ background: "var(--cl-ok-dim)", color: "var(--cl-ok)" }}
+          >
+            Tamam
+          </span>
         ),
       sortValue: (r) => (r.turnikeKaydi === 0 ? -1 : r.gelinenGun === 0 ? 0 : r.netFark < 0 ? 1 : 2),
     },
@@ -170,16 +197,25 @@ export default function OzetTable({ rows }: { rows: OzetRow[] }) {
   return (
     <>
       {turnikesizSayisi > 0 && (
-        <div className="mb-3 rounded border border-slate-700 bg-slate-800/40 p-2 text-xs text-slate-400">
-          Bu dönemde <span className="text-slate-200">{turnikesizSayisi}</span> kişinin hiç turnike
+        <div
+          className="mb-3 rounded-xl p-3 text-xs"
+          style={{
+            background: "rgba(255,255,255,0.04)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            color: "var(--tx-secondary)",
+          }}
+        >
+          Bu dönemde{" "}
+          <span style={{ color: "var(--tx-primary)" }}>{turnikesizSayisi}</span> kişinin hiç turnike
           kaydı yok (teknik/depo/klinik personeli genelde &quot;Personel GİRİŞ&quot;, &quot;Soyunma
           Odası&quot;, &quot;Lobi geçiş&quot; kapılarını kullanıyor). Turnike bazlı çalışma süresi bu
-          kişiler için hesaplanamaz; <span className="text-slate-200">Turnike kaydı yok</span> olarak
+          kişiler için hesaplanamaz;{" "}
+          <span style={{ color: "var(--tx-primary)" }}>Turnike kaydı yok</span> olarak
           işaretlendiler. Sadece turnike kullananları görmek için durum filtresinden{" "}
-          <span className="text-slate-200">Turnike Kullananlar</span> seçin.
+          <span style={{ color: "var(--tx-primary)" }}>Turnike Kullananlar</span> seçin.
         </div>
       )}
-      <p className="mb-3 text-xs text-slate-500">
+      <p className="mb-3 text-xs" style={{ color: "var(--tx-muted)" }}>
         💡 Sütun başlığına tıkla = sırala · Satıra tıkla = eksik günleri gör
       </p>
       <DataTable
@@ -209,47 +245,104 @@ export default function OzetTable({ rows }: { rows: OzetRow[] }) {
         }
       />
 
+      {/* Modal */}
       {detay && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
           onClick={() => setDetay(null)}
         >
           <div
-            className="max-h-[80vh] w-full max-w-lg overflow-y-auto rounded-lg border border-slate-700 bg-slate-900 p-5"
+            className="modal-panel glass-modal max-h-[80vh] w-full max-w-lg overflow-y-auto p-6"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mb-1 text-lg font-semibold">{detay.adSoyad}</div>
-            <div className="mb-4 text-sm text-slate-400">
+            {/* Modal üst parıltı */}
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 top-0 h-px rounded-t-[18px]"
+              style={{
+                background:
+                  "linear-gradient(90deg, transparent, rgba(56,189,248,0.4) 50%, transparent)",
+              }}
+            />
+
+            <div
+              className="mb-1 text-lg font-semibold"
+              style={{ color: "var(--tx-primary)" }}
+            >
+              {detay.adSoyad}
+            </div>
+            <div className="mb-5 text-sm" style={{ color: "var(--tx-secondary)" }}>
               {detay.takimLideri} · Sicil {detay.sicil}
             </div>
-            <div className="mb-3 grid grid-cols-2 gap-3 text-sm">
-              <div className="rounded border border-slate-800 p-2">
-                <div className="text-xs text-slate-500">Turnike İçi (Net)</div>
-                <div className="tabular-nums">{dkp(detay.turnikeIci)}</div>
+
+            <div className="mb-4 grid grid-cols-2 gap-3 text-sm">
+              <div
+                className="rounded-xl p-3"
+                style={{
+                  background: "rgba(56,189,248,0.06)",
+                  border: "1px solid rgba(56,189,248,0.15)",
+                }}
+              >
+                <div className="mb-1 text-xs" style={{ color: "var(--tx-muted)" }}>
+                  Turnike İçi (Net)
+                </div>
+                <div className="tabular-nums font-semibold" style={{ color: "var(--tx-primary)" }}>
+                  {dkp(detay.turnikeIci)}
+                </div>
               </div>
-              <div className="rounded border border-slate-800 p-2">
-                <div className="text-xs text-slate-500">Beklenen</div>
-                <div className="tabular-nums">{dkp(detay.beklenenNet)}</div>
+              <div
+                className="rounded-xl p-3"
+                style={{
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                }}
+              >
+                <div className="mb-1 text-xs" style={{ color: "var(--tx-muted)" }}>
+                  Beklenen
+                </div>
+                <div className="tabular-nums font-semibold" style={{ color: "var(--tx-primary)" }}>
+                  {dkp(detay.beklenenNet)}
+                </div>
               </div>
             </div>
-            <div className="mb-2 text-sm font-medium text-slate-300">
+
+            <div
+              className="mb-3 text-sm font-semibold"
+              style={{ color: "var(--tx-primary)" }}
+            >
               Gelmediği İş Günleri ({detay.eksikGunler.length})
             </div>
             {detay.eksikGunler.length === 0 ? (
-              <p className="text-sm text-emerald-400">Tüm iş günlerinde kayıt var.</p>
+              <p className="text-sm" style={{ color: "var(--cl-ok)" }}>
+                Tüm iş günlerinde kayıt var.
+              </p>
             ) : (
               <ul className="space-y-1 text-sm">
                 {detay.eksikGunler.map((d) => (
-                  <li key={d.gs} className="flex justify-between rounded bg-slate-800/50 px-2 py-1">
-                    <span>{d.gs}</span>
-                    <span className="text-slate-500">{d.gun}</span>
+                  <li
+                    key={d.gs}
+                    className="flex justify-between rounded-lg px-3 py-1.5"
+                    style={{
+                      background: "rgba(248,113,113,0.06)",
+                      border: "1px solid rgba(248,113,113,0.1)",
+                    }}
+                  >
+                    <span style={{ color: "var(--tx-primary)" }}>{d.gs}</span>
+                    <span style={{ color: "var(--tx-muted)" }}>{d.gun}</span>
                   </li>
                 ))}
               </ul>
             )}
+
             <button
               onClick={() => setDetay(null)}
-              className="mt-4 w-full rounded-md border border-slate-700 py-1.5 text-sm text-slate-400 hover:bg-slate-800"
+              className="mt-5 w-full rounded-xl py-2 text-sm transition-all duration-150"
+              style={{
+                background: "rgba(255,255,255,0.05)",
+                border: "1px solid rgba(255,255,255,0.1)",
+                color: "var(--tx-secondary)",
+              }}
             >
               Kapat
             </button>

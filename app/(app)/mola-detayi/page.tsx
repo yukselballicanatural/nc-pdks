@@ -20,7 +20,7 @@ export default async function MolaDetayiPage({
 }) {
   const sp = await searchParams;
   const data = await loadPdksData(sp);
-  const { range, shifts, corLookup, isGece } = data;
+  const { range, shifts, corLookup, isGece, otherReadersByKey } = data;
 
   const rows: MolaRow[] = [];
   for (const p of visiblePeople(data)) {
@@ -28,7 +28,8 @@ export default async function MolaDetayiPage({
     const adSoyad = `${p.ad} ${p.soyad}`.trim() || p.sicil;
     for (let d = range.sd; d <= range.ed; d = addDays(d, 1)) {
       const gs = formatGs(d);
-      const sh = shifts.get(shiftKey(p.sicil, gs));
+      const key = shiftKey(p.sicil, gs);
+      const sh = shifts.get(key);
       if (!sh) continue;
       rows.push({
         key: `${p.sicil}-${gs}`,
@@ -42,7 +43,7 @@ export default async function MolaDetayiPage({
         toplam: sh.brut,
         calismaAraliklari: sh.pairs.map(([a, b]) => aralik(a, b)),
         molaAraliklari: sh.outsideIntervals.map(([a, b]) => aralik(a, b)),
-        digerOkuyucular: [...new Set(sh.others.map((o) => o.ok))],
+        digerOkuyucular: otherReadersByKey.get(key) ?? [],
         digerDakika: sh.otherMin,
       });
     }

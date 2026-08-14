@@ -19,10 +19,14 @@ export default async function PersonelPage({
 
   const sp = await searchParams;
   const [data, zoho] = await Promise.all([loadPdksData(sp), fetchZohoUsers()]);
-  const { events, isGece, range } = data;
+  const { isGece, range, shifts, turnikeCountByS } = data;
 
+  // Dönemdeki toplam kayıt sayısı (materyalize vardiya kayıtlarından).
   const counts = new Map<string, number>();
-  for (const r of events) counts.set(r.sicil, (counts.get(r.sicil) ?? 0) + 1);
+  for (const [key, sh] of shifts) {
+    const sicil = key.split("::")[0];
+    counts.set(sicil, (counts.get(sicil) ?? 0) + sh.cnt);
+  }
 
   const index = buildZohoMatchIndex(zoho.raw);
 

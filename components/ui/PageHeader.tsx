@@ -31,16 +31,46 @@ export default function PageHeader({
   const counts = range ? rangeDayCounts(range) : null;
 
   return (
-    <div className="border-b border-slate-800">
-      <div className="flex flex-wrap items-center gap-3 px-6 py-4">
+    <div
+      style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}
+    >
+      <div
+        className="flex flex-wrap items-center gap-3 px-6 py-4"
+        style={{
+          background: "rgba(6,12,24,0.5)",
+          backdropFilter: "blur(8px)",
+          WebkitBackdropFilter: "blur(8px)",
+        }}
+      >
         <div className="min-w-0">
-          <h1 className="text-lg font-semibold text-slate-100">{title}</h1>
-          {description && <p className="mt-0.5 text-sm text-slate-400">{description}</p>}
+          <h1
+            className="text-lg font-semibold tracking-tight"
+            style={{ color: "var(--tx-primary)" }}
+          >
+            {title}
+          </h1>
+          {description && (
+            <p className="mt-0.5 text-sm" style={{ color: "var(--tx-secondary)" }}>
+              {description}
+            </p>
+          )}
         </div>
-        {actions && <div className="ml-auto flex items-center gap-2">{actions}</div>}
+        {actions && (
+          <div className="ml-auto flex items-center gap-2">{actions}</div>
+        )}
       </div>
       {showDateBar && range && counts && (
-        <Suspense fallback={<div className="h-12 border-b border-slate-800 bg-slate-900/50" />}>
+        <Suspense
+          fallback={
+            <div
+              className="h-11"
+              style={{
+                background: "rgba(6,12,24,0.6)",
+                borderBottom: "1px solid rgba(255,255,255,0.06)",
+              }}
+            />
+          }
+        >
           <DateRangeBar
             sd={range.sdParam}
             ed={range.edParam}

@@ -49,54 +49,121 @@ export default function DateRangeBar({
     router.push(`?${params.toString()}`);
   }
 
+  const ps = presets(today);
+
   return (
-    <div className="flex flex-wrap items-center gap-3 border-b border-slate-800 bg-slate-900/50 px-6 py-3">
-      <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Dönem</span>
-      <input
-        type="date"
-        value={localSd}
-        max={localEd}
-        onChange={(e) => setLocalSd(e.target.value)}
-        className="rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-sm text-slate-100 outline-none focus:border-teal-500"
-      />
-      <span className="text-slate-500">–</span>
-      <input
-        type="date"
-        value={localEd}
-        min={localSd}
-        onChange={(e) => setLocalEd(e.target.value)}
-        className="rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-sm text-slate-100 outline-none focus:border-teal-500"
-      />
+    <div
+      className="flex flex-wrap items-center gap-2 px-5 py-2.5"
+      style={{
+        background: "rgba(6,12,24,0.6)",
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
+        borderBottom: "1px solid rgba(255,255,255,0.06)",
+      }}
+    >
+      <span
+        className="text-[10px] font-semibold uppercase tracking-widest"
+        style={{ color: "var(--tx-muted)" }}
+      >
+        Dönem
+      </span>
+
+      {/* Tarih giriş ikilisi */}
+      <div
+        className="flex items-center gap-1.5 rounded-xl px-3 py-1.5"
+        style={{
+          background: "rgba(255,255,255,0.04)",
+          border: "1px solid rgba(255,255,255,0.09)",
+        }}
+      >
+        <input
+          type="date"
+          value={localSd}
+          max={localEd}
+          onChange={(e) => setLocalSd(e.target.value)}
+          className="input-glass border-none bg-transparent px-0 py-0 text-sm outline-none focus:shadow-none"
+          style={{ boxShadow: "none", borderRadius: 0 }}
+        />
+        <span style={{ color: "var(--tx-muted)" }} className="text-xs select-none">
+          –
+        </span>
+        <input
+          type="date"
+          value={localEd}
+          min={localSd}
+          onChange={(e) => setLocalEd(e.target.value)}
+          className="input-glass border-none bg-transparent px-0 py-0 text-sm outline-none focus:shadow-none"
+          style={{ boxShadow: "none", borderRadius: 0 }}
+        />
+      </div>
+
       <button
         onClick={() => apply(localSd, localEd)}
-        className="rounded-md bg-teal-500 px-3 py-1 text-sm font-medium text-slate-950 hover:bg-teal-400"
+        className="rounded-lg px-3 py-1.5 text-xs font-semibold tracking-wide transition-all duration-150"
+        style={{
+          background: "linear-gradient(135deg, rgba(56,189,248,0.85), rgba(6,214,160,0.8))",
+          color: "#06091a",
+          boxShadow: "0 2px 8px rgba(56,189,248,0.2)",
+        }}
       >
         Uygula
       </button>
 
-      <div className="mx-1 h-5 w-px bg-slate-700" />
+      <div
+        className="mx-1 h-4 w-px"
+        style={{ background: "rgba(255,255,255,0.08)" }}
+      />
 
-      {presets(today).map((p) => (
-        <button
-          key={p.label}
-          onClick={() => {
-            setLocalSd(p.sd);
-            setLocalEd(p.ed);
-            apply(p.sd, p.ed);
-          }}
-          className={`rounded-md border px-2 py-1 text-xs transition ${
-            sd === p.sd && ed === p.ed
-              ? "border-teal-500 bg-teal-500/10 text-teal-300"
-              : "border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
-          }`}
-        >
-          {p.label}
-        </button>
-      ))}
+      {/* Segmented preset butonları */}
+      <div
+        className="flex items-center gap-0.5 rounded-xl p-0.5"
+        style={{
+          background: "rgba(255,255,255,0.04)",
+          border: "1px solid rgba(255,255,255,0.07)",
+        }}
+      >
+        {ps.map((p) => {
+          const active = sd === p.sd && ed === p.ed;
+          return (
+            <button
+              key={p.label}
+              onClick={() => {
+                setLocalSd(p.sd);
+                setLocalEd(p.ed);
+                apply(p.sd, p.ed);
+              }}
+              className="rounded-lg px-2.5 py-1 text-xs transition-all duration-150"
+              style={
+                active
+                  ? {
+                      background:
+                        "linear-gradient(135deg, rgba(56,189,248,0.2), rgba(6,214,160,0.15))",
+                      border: "1px solid rgba(56,189,248,0.3)",
+                      color: "#e0f6ff",
+                      fontWeight: 500,
+                    }
+                  : {
+                      background: "transparent",
+                      border: "1px solid transparent",
+                      color: "var(--tx-secondary)",
+                    }
+              }
+            >
+              {p.label}
+            </button>
+          );
+        })}
+      </div>
 
-      <div className="ml-auto text-xs text-slate-500">
-        {dayCount} gün · <span className="text-slate-400">{workdayCount} iş günü</span> (herkes için
-        aynı)
+      <div
+        className="ml-auto text-xs"
+        style={{ color: "var(--tx-muted)" }}
+      >
+        {dayCount} gün ·{" "}
+        <span style={{ color: "var(--tx-secondary)" }}>
+          {workdayCount} iş günü
+        </span>{" "}
+        (herkes için aynı)
       </div>
     </div>
   );

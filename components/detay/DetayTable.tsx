@@ -56,30 +56,54 @@ export default function DetayTable({ rows, canEdit }: { rows: DetayRow[]; canEdi
       key: "gun",
       header: "Gün",
       align: "center",
-      cell: (r) => <span className={r.hafta ? "text-amber-300" : "text-slate-400"}>{r.gun}</span>,
+      cell: (r) => (
+        <span style={{ color: r.hafta ? "var(--cl-warn)" : "var(--tx-secondary)" }}>{r.gun}</span>
+      ),
       sortValue: (r) => r.gun,
     },
-    { key: "giris", header: "İlk Giriş", align: "center", cell: (r) => r.giris ?? <span className="text-slate-600">-</span>, sortValue: (r) => r.giris ?? "" },
-    { key: "cikis", header: "Son Çıkış", align: "center", cell: (r) => r.cikis ?? <span className="text-slate-600">-</span>, sortValue: (r) => r.cikis ?? "" },
+    {
+      key: "giris",
+      header: "İlk Giriş",
+      align: "center",
+      cell: (r) => r.giris ?? <span style={{ color: "var(--tx-disabled)" }}>-</span>,
+      sortValue: (r) => r.giris ?? "",
+    },
+    {
+      key: "cikis",
+      header: "Son Çıkış",
+      align: "center",
+      cell: (r) => r.cikis ?? <span style={{ color: "var(--tx-disabled)" }}>-</span>,
+      sortValue: (r) => r.cikis ?? "",
+    },
     {
       key: "net",
       header: "Turnike İçi",
       align: "right",
-      cell: (r) => (r.hasData ? dkp(r.net) : <span className="text-slate-600">-</span>),
+      cell: (r) => r.hasData ? dkp(r.net) : <span style={{ color: "var(--tx-disabled)" }}>-</span>,
       sortValue: (r) => r.net,
     },
     {
       key: "mola",
       header: "Turnike Dışı",
       align: "right",
-      cell: (r) => (r.hasData ? <span className="text-slate-400">{dkp(r.mola)}</span> : <span className="text-slate-600">-</span>),
+      cell: (r) =>
+        r.hasData ? (
+          <span style={{ color: "var(--tx-secondary)" }}>{dkp(r.mola)}</span>
+        ) : (
+          <span style={{ color: "var(--tx-disabled)" }}>-</span>
+        ),
       sortValue: (r) => r.mola,
     },
     {
       key: "brut",
       header: "Toplam",
       align: "right",
-      cell: (r) => (r.hasData ? <span className="text-slate-400">{dkp(r.brut)}</span> : <span className="text-slate-600">-</span>),
+      cell: (r) =>
+        r.hasData ? (
+          <span style={{ color: "var(--tx-secondary)" }}>{dkp(r.brut)}</span>
+        ) : (
+          <span style={{ color: "var(--tx-disabled)" }}>-</span>
+        ),
       sortValue: (r) => r.brut,
     },
     {
@@ -88,9 +112,11 @@ export default function DetayTable({ rows, canEdit }: { rows: DetayRow[]; canEdi
       align: "right",
       cell: (r) =>
         r.hasData ? (
-          <span className={r.netFark < 0 ? "text-red-400" : "text-emerald-400"}>{dks(r.netFark)}</span>
+          <span style={{ color: r.netFark < 0 ? "var(--cl-danger)" : "var(--cl-ok)" }}>
+            {dks(r.netFark)}
+          </span>
         ) : (
-          <span className="text-slate-600">-</span>
+          <span style={{ color: "var(--tx-disabled)" }}>-</span>
         ),
       sortValue: (r) => r.netFark,
     },
@@ -98,7 +124,7 @@ export default function DetayTable({ rows, canEdit }: { rows: DetayRow[]; canEdi
       key: "kayit",
       header: "Kayıt",
       align: "center",
-      cell: (r) => <span className="text-slate-500">{r.kayit ?? "-"}</span>,
+      cell: (r) => <span style={{ color: "var(--tx-muted)" }}>{r.kayit ?? "-"}</span>,
       sortValue: (r) => r.kayit ?? 0,
     },
     {
@@ -106,9 +132,14 @@ export default function DetayTable({ rows, canEdit }: { rows: DetayRow[]; canEdi
       header: "Düzeltme",
       cell: (r) =>
         r.duzeltmeNeden ? (
-          <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-xs text-amber-300">{r.duzeltmeNeden}</span>
+          <span
+            className="rounded-full px-2 py-0.5 text-xs font-medium"
+            style={{ background: "var(--cl-warn-dim)", color: "var(--cl-warn)" }}
+          >
+            {r.duzeltmeNeden}
+          </span>
         ) : (
-          <span className="text-slate-700">-</span>
+          <span style={{ color: "var(--tx-disabled)" }}>-</span>
         ),
       sortValue: (r) => r.duzeltmeNeden ?? "",
     },
@@ -116,7 +147,7 @@ export default function DetayTable({ rows, canEdit }: { rows: DetayRow[]; canEdi
 
   return (
     <>
-      <p className="mb-3 text-xs text-slate-500">
+      <p className="mb-3 text-xs" style={{ color: "var(--tx-muted)" }}>
         💡 {canEdit ? "Satıra tıkla = o günü düzelt" : "Takım Lideri modunda düzeltme yapılamaz"} ·
         Sütun başlığına tıkla = sırala
       </p>
@@ -173,21 +204,38 @@ function CorrectionModal({ row, onClose }: { row: DetayRow; onClose: () => void 
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+    <div
+      className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
+      onClick={onClose}
+    >
       <div
-        className="w-full max-w-md rounded-lg border border-slate-700 bg-slate-900 p-5"
+        className="modal-panel glass-modal relative w-full max-w-md p-6"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="text-lg font-semibold">Gün Düzelt</div>
-        <div className="mb-4 text-sm text-slate-400">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-px rounded-t-[18px]"
+          style={{
+            background:
+              "linear-gradient(90deg, transparent, rgba(251,191,36,0.5) 50%, transparent)",
+          }}
+        />
+
+        <div className="text-lg font-semibold" style={{ color: "var(--tx-primary)" }}>
+          Gün Düzelt
+        </div>
+        <div className="mb-5 text-sm" style={{ color: "var(--tx-secondary)" }}>
           {row.adSoyad} · {row.tarih} ({row.gun})
         </div>
 
-        <label className="mb-1 block text-xs text-slate-400">Neden</label>
+        <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider" style={{ color: "var(--tx-secondary)" }}>
+          Neden
+        </label>
         <select
           value={neden}
           onChange={(e) => setNeden(e.target.value)}
-          className="mb-3 w-full rounded-md border border-slate-700 bg-slate-800 px-2 py-1.5 text-sm text-slate-100"
+          className="input-glass mb-4 w-full px-3 py-2 text-sm"
         >
           {REASONS.map((r) => (
             <option key={r} value={r}>
@@ -196,51 +244,78 @@ function CorrectionModal({ row, onClose }: { row: DetayRow; onClose: () => void 
           ))}
         </select>
 
-        <label className="mb-1 block text-xs text-slate-400">
+        <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider" style={{ color: "var(--tx-secondary)" }}>
           Sayılacak Çalışma Süresi (mevcut: {dkp(row.net)})
         </label>
-        <div className="mb-3 flex items-center gap-2">
+        <div className="mb-4 flex items-center gap-2">
           <input
             type="number"
             min={0}
             max={24}
             value={saat}
             onChange={(e) => setSaat(Number(e.target.value))}
-            className="w-20 rounded-md border border-slate-700 bg-slate-800 px-2 py-1.5 text-sm text-slate-100"
+            className="input-glass w-20 px-3 py-2 text-sm"
           />
-          <span className="text-sm text-slate-500">saat</span>
+          <span className="text-sm" style={{ color: "var(--tx-muted)" }}>
+            saat
+          </span>
           <input
             type="number"
             min={0}
             max={59}
             value={dakika}
             onChange={(e) => setDakika(Number(e.target.value))}
-            className="w-20 rounded-md border border-slate-700 bg-slate-800 px-2 py-1.5 text-sm text-slate-100"
+            className="input-glass w-20 px-3 py-2 text-sm"
           />
-          <span className="text-sm text-slate-500">dakika</span>
+          <span className="text-sm" style={{ color: "var(--tx-muted)" }}>
+            dakika
+          </span>
         </div>
 
-        <label className="mb-1 block text-xs text-slate-400">Açıklama (opsiyonel)</label>
+        <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider" style={{ color: "var(--tx-secondary)" }}>
+          Açıklama (opsiyonel)
+        </label>
         <input
           type="text"
           value={acik}
           onChange={(e) => setAcik(e.target.value)}
-          className="mb-4 w-full rounded-md border border-slate-700 bg-slate-800 px-2 py-1.5 text-sm text-slate-100"
+          className="input-glass mb-5 w-full px-3 py-2 text-sm"
         />
 
-        {error && <p className="mb-3 text-sm text-red-400">{error}</p>}
+        {error && (
+          <div
+            className="mb-4 rounded-xl px-3 py-2 text-sm"
+            style={{
+              background: "var(--cl-danger-dim)",
+              border: "1px solid rgba(248,113,113,0.25)",
+              color: "var(--cl-danger)",
+            }}
+          >
+            {error}
+          </div>
+        )}
 
         <div className="flex gap-2">
           <button
             onClick={submit}
             disabled={pending}
-            className="flex-1 rounded-md bg-teal-500 py-1.5 text-sm font-medium text-slate-950 hover:bg-teal-400 disabled:opacity-60"
+            className="flex-1 rounded-xl py-2 text-sm font-semibold tracking-wide transition-all duration-150 disabled:opacity-50"
+            style={{
+              background: "linear-gradient(135deg, #38bdf8, #06d6a0)",
+              color: "#06091a",
+              boxShadow: "0 4px 16px rgba(56,189,248,0.25)",
+            }}
           >
-            {pending ? "Kaydediliyor..." : "Kaydet"}
+            {pending ? "Kaydediliyor…" : "Kaydet"}
           </button>
           <button
             onClick={onClose}
-            className="flex-1 rounded-md border border-slate-700 py-1.5 text-sm text-slate-400 hover:bg-slate-800"
+            className="flex-1 rounded-xl py-2 text-sm transition-all duration-150"
+            style={{
+              background: "rgba(255,255,255,0.05)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              color: "var(--tx-secondary)",
+            }}
           >
             İptal
           </button>

@@ -8,8 +8,21 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!session) redirect("/login");
 
   return (
-    <div className="flex min-h-screen bg-slate-950 text-slate-100">
-      <Suspense fallback={<div className="w-56 shrink-0 border-r border-slate-800 bg-slate-900" />}>
+    <div
+      className="flex min-h-screen"
+      style={{ color: "var(--tx-primary)" }}
+    >
+      <Suspense
+        fallback={
+          <div
+            className="w-56 shrink-0"
+            style={{
+              background: "rgba(6,12,24,0.75)",
+              borderRight: "1px solid rgba(255,255,255,0.07)",
+            }}
+          />
+        }
+      >
         <Sidebar role={session.role} username={session.username} />
       </Suspense>
       <main className="min-w-0 flex-1">{children}</main>

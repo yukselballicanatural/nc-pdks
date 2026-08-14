@@ -1,21 +1,32 @@
-// Tüm sayfaların paylaştığı tek veri/hesaplama giriş noktası.
-// React cache() ile aynı istek içinde birden fazla çağrı tek fetch'e iner.
+// Tüm sayfaların paylaştığı tek veri giriş noktası.
+//
+// ÖNEMLİ: Burada ARTIK ham turnike_gecisler taranmıyor. Sonuçlar senkronizasyon
+// sırasında bir kez hesaplanıp pdks_shifts / pdks_alarms / pdks_buddy /
+// pdks_personnel_cache tablolarına yazılıyor (bkz. lib/sync/runSync.ts); sayfalar
+// dönem başına yalnızca birkaç bin küçük satır okuyor. Önceden her sayfa açılışında
+// 60 binden fazla ham satır çekilip baştan hesaplanıyordu (~3.5 sn).
 import "server-only";
 import { cache } from "react";
-import { calcShifts } from "../engine/calcShifts";
-import { detectAlarms } from "../engine/detectAlarms";
-import { detectBuddy } from "../engine/detectBuddy";
-import { isGece as isGeceRule } from "../engine/isGece";
-import { addDays, dateOnly, mesaiGunu } from "../engine/mesaiGunu";
+import { addDays, dateOnly } from "../engine/mesaiGunu";
 import { parseDateParam, nowWallClock, toDateParam } from "../engine/tz";
-import type { Alarm, PdksRawEvent, ShiftResult } from "../engine/types";
+import type { Alarm, ShiftResult } from "../engine/types";
 import { ReaderConfig } from "../engine/readerConfig";
-import { fetchPdksEvents, type PersonInfo } from "../db/queries/pdksEvents";
+import { isGece as isGeceRule } from "../engine/isGece";
 import { loadReaderConfig } from "../db/queries/readerRules";
 import { loadCorrections, type CorrectionRow } from "../db/queries/corrections";
+import {
+  fetchAlarms,
+  fetchBuddy,
+  fetchPersonnel,
+  fetchShifts,
+  type BuddyRow,
+  type PersonInfo,
+} from "../db/queries/materialized";
 import { supabaseServer } from "../db/supabaseServer";
 import type { CorrectionLookup, StartEndLookup } from "../engine/summary";
 import { getSession, type SessionPayload } from "../auth/session";
+
+export type { PersonInfo };
 
 export interface DateRange {
   sd: Date;
@@ -26,7 +37,6 @@ export interface DateRange {
 
 /**
  * URL parametrelerinden dönem çözer. Varsayılan: bulunduğumuz ayın 1'i → bugün.
- * (Önceki "son 14 gün" varsayılanı dönemi belirsiz kılıyordu.)
  */
 export function resolveRange(sp: Record<string, string | string[] | undefined>): DateRange {
   const today = dateOnly(nowWallClock());
@@ -50,20 +60,16 @@ async function loadGeceTl(): Promise<string[]> {
 
 export interface PdksData {
   range: DateRange;
-  events: PdksRawEvent[];
+  shifts: Map<string, ShiftResult>;
+  /** MolaTable için turnike dışı okutulan okuyucu adları (anahtar: sicil::gs). */
+  otherReadersByKey: Map<string, string[]>;
   /**
-   * Dönem içinde kişinin ÇALIŞMA alanı (turnike) okuyucusundan kaç kaydı var.
-   * 0 ise turnike bazlı çalışma süresi hesaplanamaz — satış dışı personel
-   * (teknik, depo, klinik) turnikeyi kullanmıyor, "Personel GİRİŞ", "Soyunma
-   * Odası", "Lobi geçiş" gibi kapılardan giriyor. Bu kişiler eksik saat
-   * istatistiğinde yanıltıcı görünmemesi için ayrıca işaretlenir.
+   * Dönem içinde kişinin turnike (çalışma alanı) kayıt sayısı. 0 ise turnike bazlı
+   * çalışma süresi hesaplanamaz — satış dışı personel turnikeyi kullanmıyor.
    */
   turnikeCountByS: Map<string, number>;
-  /** Sadece dönem içindeki (mesai günü bazlı) kayıtlar — Log/Buddy ekranları için. */
-  eventsInRange: PdksRawEvent[];
-  shifts: Map<string, ShiftResult>;
   alarms: Alarm[];
-  buddyIdx: number[];
+  buddy: BuddyRow[];
   personByS: Map<string, PersonInfo>;
   readerConfig: ReaderConfig;
   corrections: CorrectionRow[];
@@ -83,26 +89,27 @@ export const loadPdksData = cache(async function loadPdksData(
   const session = await getSession();
   const tlFilter = session?.role === "tl" ? session.tlName : null;
 
-  // Gece vardiyası kaydırması için sınırları 1 gün pay bırakarak çekiyoruz:
-  // ed gününün gece vardiyası ed+1 12:00'a kadar sürebilir.
-  const fetchStart = addDays(range.sd, -1);
-  const fetchEnd = addDays(range.ed, 2);
+  const [
+    { shifts, otherReadersByKey, turnikeCountByS },
+    alarms,
+    buddy,
+    personByS,
+    readerConfig,
+    { rows: corrections, lookup: corLookup },
+    geceTl,
+  ] = await Promise.all([
+    fetchShifts(range.sdParam, range.edParam),
+    fetchAlarms(range.sdParam, range.edParam),
+    fetchBuddy(range.sdParam, range.edParam),
+    fetchPersonnel(),
+    loadReaderConfig(),
+    loadCorrections(),
+    loadGeceTl(),
+  ]);
 
-  const [{ events, personByS }, readerConfig, { rows: corrections, lookup: corLookup }, geceTl] =
-    await Promise.all([
-      fetchPdksEvents(fetchStart, fetchEnd),
-      loadReaderConfig(),
-      loadCorrections(),
-      loadGeceTl(),
-    ]);
-
-  // Vardiya bilgisi henüz Supabase'de yok (kullanıcı: "şuan herkesi gündüz alalım").
-  // Vardiya alanı eklendiğinde burada personnel.vardiya okunup isGeceRule'a verilir;
-  // TL bazlı gece listesi mantığı (gece_tl) hazır bekliyor.
-  //
-  // Sicil bazında memoize: isGeceRule her çağrıda Türkçe normalize (NFKD) yapıyor ve
-  // bu fonksiyon on binlerce olay için çağrılıyor. Aynı girdi -> aynı sonuç olduğu
-  // için önbellek davranışı değiştirmez, sadece tekrarlı işi ortadan kaldırır.
+  // Vardiya bilgisi henüz Supabase'de yok (kullanıcı kararı: şimdilik herkes gündüz).
+  // Vardiya alanı eklendiğinde burada okunup isGeceRule'a verilecek; TL bazlı gece
+  // listesi (gece_tl) mantığı hazır bekliyor.
   const geceCache = new Map<string, boolean>();
   const isGece = (sicil: string): boolean => {
     const cached = geceCache.get(sicil);
@@ -113,36 +120,16 @@ export const loadPdksData = cache(async function loadPdksData(
     return val;
   };
 
-  const shifts = calcShifts(events, readerConfig, isGece);
-  const alarms = detectAlarms(events, readerConfig, isGece, (sicil) => {
-    const p = personByS.get(sicil);
-    return p ? `${p.ad} ${p.soyad}`.trim() || sicil : sicil;
-  });
-  const buddyIdx = detectBuddy(events, readerConfig);
-
-  const eventsInRange = events.filter((r) => {
-    const mg = mesaiGunu(r.dt, isGece(r.sicil));
-    return mg >= range.sd && mg <= range.ed;
-  });
-
-  const turnikeCountByS = new Map<string, number>();
-  for (const p of personByS.keys()) turnikeCountByS.set(p, 0);
-  for (const r of eventsInRange) {
-    if (readerConfig.getArea(r.ok) !== "work") continue;
-    turnikeCountByS.set(r.sicil, (turnikeCountByS.get(r.sicil) ?? 0) + 1);
-  }
-
   // start_date/end_date bilgisi henüz yok — dönem sınırı olduğu gibi kullanılır.
   const startEndLookup: StartEndLookup = { getStartDate: () => null, getEndDate: () => null };
 
   return {
     range,
-    events,
-    turnikeCountByS,
-    eventsInRange,
     shifts,
+    otherReadersByKey,
+    turnikeCountByS,
     alarms,
-    buddyIdx,
+    buddy,
     personByS,
     readerConfig,
     corrections,
@@ -155,15 +142,28 @@ export const loadPdksData = cache(async function loadPdksData(
   };
 });
 
-/** TL modu filtresi + arama/TL parametresi uygulanmış kişi listesi (sicil sıralı). */
+/**
+ * Görünür kişiler: TL modunda yalnızca kendi takımı. Ada göre sıralı.
+ * Yalnızca dönemde vardiya kaydı olan VEYA düzeltmesi olan kişiler döner —
+ * personel önbelleği tüm zamanları kapsadığı için dönemle ilgisiz kişileri
+ * listelemek yanıltıcı olurdu.
+ */
 export function visiblePeople(data: PdksData): PersonInfo[] {
-  const all = [...data.personByS.values()];
-  const filtered = data.tlFilter
-    ? all.filter((p) => p.takimLideri === data.tlFilter)
-    : all;
+  const active = new Set<string>();
+  for (const key of data.shifts.keys()) active.add(key.split("::")[0]);
+  for (const c of data.corrections) active.add(c.sicil);
+
+  const all = [...data.personByS.values()].filter((p) => active.has(p.sicil));
+  const filtered = data.tlFilter ? all.filter((p) => p.takimLideri === data.tlFilter) : all;
+
   return filtered.sort((a, b) => {
     const an = `${a.ad} ${a.soyad}`.trim();
     const bn = `${b.ad} ${b.soyad}`.trim();
     return an.localeCompare(bn, "tr");
   });
+}
+
+/** Dönemin gece vardiyası payı dahil ham veri sınırları (alarm detayı vb. için). */
+export function paddedRange(range: DateRange): { start: Date; end: Date } {
+  return { start: addDays(range.sd, -1), end: addDays(range.ed, 2) };
 }

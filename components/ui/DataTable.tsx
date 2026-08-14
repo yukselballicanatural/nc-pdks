@@ -96,8 +96,9 @@ export default function DataTable<T>({
 
   return (
     <div>
+      {/* Toolbar */}
       {(searchText || filters?.length || toolbarExtra) && (
-        <div className="mb-3 flex flex-wrap items-center gap-3">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
           {searchText && (
             <input
               type="text"
@@ -107,7 +108,7 @@ export default function DataTable<T>({
                 setSearch(e.target.value);
                 setLimit(pageSize);
               }}
-              className="w-64 rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm text-slate-100 outline-none focus:border-teal-500"
+              className="input-glass w-64 px-3 py-1.5 text-sm"
             />
           )}
           {filters?.map((f) => (
@@ -118,7 +119,7 @@ export default function DataTable<T>({
                 f.onChange(e.target.value);
                 setLimit(pageSize);
               }}
-              className="max-w-56 rounded-md border border-slate-700 bg-slate-800 px-2 py-1.5 text-sm text-slate-100 outline-none focus:border-teal-500"
+              className="input-glass max-w-56 px-2 py-1.5 text-sm"
             >
               <option value="">{f.label}</option>
               {f.options.map((o) => (
@@ -129,42 +130,89 @@ export default function DataTable<T>({
             </select>
           ))}
           {toolbarExtra}
-          <span className="ml-auto text-xs text-slate-500">
+          <span
+            className="ml-auto text-xs"
+            style={{ color: "var(--tx-muted)" }}
+          >
             {sorted.length.toLocaleString("tr-TR")} kayıt
-            {sorted.length !== rows.length && ` (toplam ${rows.length.toLocaleString("tr-TR")})`}
+            {sorted.length !== rows.length &&
+              ` (toplam ${rows.length.toLocaleString("tr-TR")})`}
           </span>
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-lg border border-slate-800">
+      {/* Tablo */}
+      <div className="glass-table overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-slate-900 text-slate-400">
+          <thead className="glass-thead sticky top-0 z-10">
             <tr>
               {columns.map((c) => (
                 <th
                   key={c.key}
                   onClick={() => toggleSort(c)}
-                  style={c.width ? { width: c.width } : undefined}
-                  className={`whitespace-nowrap px-3 py-2 font-medium ${
-                    c.align === "right" ? "text-right" : c.align === "center" ? "text-center" : "text-left"
-                  } ${c.sortValue ? "cursor-pointer select-none hover:text-slate-200" : ""}`}
+                  style={c.width ? { width: c.width, color: "var(--tx-secondary)" } : { color: "var(--tx-secondary)" }}
+                  className={`whitespace-nowrap px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wider ${
+                    c.align === "right"
+                      ? "text-right"
+                      : c.align === "center"
+                        ? "text-center"
+                        : "text-left"
+                  } ${c.sortValue ? "cursor-pointer select-none" : ""}`}
                 >
-                  {c.header}
+                  <span
+                    style={
+                      c.sortValue
+                        ? { transition: "color 0.15s" }
+                        : undefined
+                    }
+                    onMouseEnter={(e) => {
+                      if (c.sortValue)
+                        (e.currentTarget as HTMLElement).style.color =
+                          "var(--tx-primary)";
+                    }}
+                    onMouseLeave={(e) => {
+                      if (c.sortValue)
+                        (e.currentTarget as HTMLElement).style.color = "";
+                    }}
+                  >
+                    {c.header}
+                  </span>
                   {sortKey === c.key && (
-                    <span className="ml-1 text-teal-400">{sortDir === "asc" ? "↑" : "↓"}</span>
+                    <span
+                      className="ml-1 text-xs"
+                      style={{ color: "var(--ac-sky)" }}
+                    >
+                      {sortDir === "asc" ? "↑" : "↓"}
+                    </span>
                   )}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {visible.map((r) => (
+            {visible.map((r, idx) => (
               <tr
                 key={rowKey(r)}
                 onClick={onRowClick ? () => onRowClick(r) : undefined}
-                className={`border-t border-slate-800 ${
-                  onRowClick ? "cursor-pointer" : ""
-                } hover:bg-slate-800/50 ${rowClass?.(r) ?? ""}`}
+                className={`${onRowClick ? "cursor-pointer" : ""} ${
+                  rowClass?.(r) ?? ""
+                }`}
+                style={{
+                  borderTop: "1px solid rgba(255,255,255,0.05)",
+                  transition: "background 0.1s",
+                  background:
+                    idx % 2 === 0
+                      ? "rgba(255,255,255,0.01)"
+                      : "transparent",
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLTableRowElement).style.background =
+                    "rgba(56,189,248,0.05)";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLTableRowElement).style.background =
+                    idx % 2 === 0 ? "rgba(255,255,255,0.01)" : "transparent";
+                }}
               >
                 {columns.map((c) => (
                   <td
@@ -176,6 +224,7 @@ export default function DataTable<T>({
                           ? "text-center"
                           : "text-left"
                     }`}
+                    style={{ color: "var(--tx-primary)" }}
                   >
                     {c.cell(r)}
                   </td>
@@ -184,7 +233,11 @@ export default function DataTable<T>({
             ))}
             {visible.length === 0 && (
               <tr>
-                <td colSpan={columns.length} className="px-3 py-8 text-center text-slate-500">
+                <td
+                  colSpan={columns.length}
+                  className="px-3 py-10 text-center text-sm"
+                  style={{ color: "var(--tx-muted)" }}
+                >
                   {emptyText}
                 </td>
               </tr>
@@ -193,13 +246,37 @@ export default function DataTable<T>({
         </table>
       </div>
 
+      {/* Daha fazla */}
       {sorted.length > visible.length && (
         <div className="mt-3 text-center">
           <button
             onClick={() => setLimit((l) => l + pageSize)}
-            className="rounded-md border border-slate-700 px-4 py-1.5 text-sm text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+            className="rounded-xl px-5 py-2 text-sm transition-all duration-150"
+            style={{
+              background: "rgba(255,255,255,0.04)",
+              border: "1px solid rgba(255,255,255,0.09)",
+              color: "var(--tx-secondary)",
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.background =
+                "rgba(56,189,248,0.08)";
+              (e.currentTarget as HTMLButtonElement).style.borderColor =
+                "rgba(56,189,248,0.2)";
+              (e.currentTarget as HTMLButtonElement).style.color =
+                "var(--tx-primary)";
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.background =
+                "rgba(255,255,255,0.04)";
+              (e.currentTarget as HTMLButtonElement).style.borderColor =
+                "rgba(255,255,255,0.09)";
+              (e.currentTarget as HTMLButtonElement).style.color =
+                "var(--tx-secondary)";
+            }}
           >
-            Daha fazla göster ({(sorted.length - visible.length).toLocaleString("tr-TR")} kayıt kaldı)
+            Daha fazla göster (
+            {(sorted.length - visible.length).toLocaleString("tr-TR")} kayıt
+            kaldı)
           </button>
         </div>
       )}

@@ -24,7 +24,7 @@ export default async function DashboardPage({
 }) {
   const sp = await searchParams;
   const data = await loadPdksData(sp);
-  const { range, shifts, corLookup, startEndLookup, isGece, alarms, buddyIdx, turnikeCountByS } = data;
+  const { range, shifts, corLookup, startEndLookup, isGece, alarms, buddy, turnikeCountByS } = data;
   const allPeople = visiblePeople(data);
 
   // Turnike kaydı olmayanlar (teknik/depo/klinik personeli) turnike bazlı hesaba
@@ -156,10 +156,9 @@ export default async function DashboardPage({
           <TlEksikChart data={tlData} />
         </div>
 
-        <p className="text-xs text-slate-600">
-          Buddy punch şüpheli kayıt sayısı: {buddyIdx.length.toLocaleString("tr-TR")} (tüm veri) ·
-          Vardiya bilgisi henüz sisteme girilmediği için tüm personel gündüz vardiyası (450 dk)
-          kabul edilmektedir.
+        <p className="text-xs" style={{ color: "var(--tx-muted)" }}>
+          Buddy punch şüpheli kayıt: {buddy.length.toLocaleString("tr-TR")} · Vardiya bilgisi henüz
+          sisteme girilmediği için tüm personel gündüz vardiyası (450 dk) kabul edilmektedir.
         </p>
       </div>
     </>
