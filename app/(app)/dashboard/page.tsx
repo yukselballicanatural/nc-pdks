@@ -24,7 +24,7 @@ export default async function DashboardPage({
 }) {
   const sp = await searchParams;
   const data = await loadPdksData(sp);
-  const { range, shifts, corLookup, startEndLookup, isGece, alarmCounts, buddyTotal, turnikeCountByS } =
+  const { range, shifts, corLookup, startEndLookup, isGece, alarmCounts, buddyTotal, turnikeCountByS, leaveLookup } =
     data;
   const allPeople = visiblePeople(data);
 
@@ -42,7 +42,16 @@ export default async function DashboardPage({
   const tlEksik = new Map<string, { eksik: number; kisi: number }>();
 
   for (const p of people) {
-    const s = summary(p.sicil, range.sd, range.ed, shifts, corLookup, startEndLookup, isGece(p.sicil));
+    const s = summary(
+      p.sicil,
+      range.sd,
+      range.ed,
+      shifts,
+      corLookup,
+      startEndLookup,
+      isGece(p.sicil),
+      leaveLookup
+    );
     totalNet += s.net;
     if (s.eksik > 0) totalEksik += s.eksik;
     else totalFazla += -s.eksik;

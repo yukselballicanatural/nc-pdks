@@ -13,12 +13,21 @@ export default async function OzetPage({
 }) {
   const sp = await searchParams;
   const data = await loadPdksData(sp);
-  const { range, shifts, corLookup, startEndLookup, isGece, turnikeCountByS } = data;
+  const { range, shifts, corLookup, startEndLookup, isGece, turnikeCountByS, leaveLookup, izinVerisiVar } =
+    data;
 
   const rows: OzetRow[] = visiblePeople(data).map((p) => {
     const gece = isGece(p.sicil);
-    const s = summary(p.sicil, range.sd, range.ed, shifts, corLookup, startEndLookup, gece);
-    const missing = getMissingDays(p.sicil, range.sd, range.ed, shifts, corLookup, startEndLookup);
+    const s = summary(p.sicil, range.sd, range.ed, shifts, corLookup, startEndLookup, gece, leaveLookup);
+    const missing = getMissingDays(
+      p.sicil,
+      range.sd,
+      range.ed,
+      shifts,
+      corLookup,
+      startEndLookup,
+      leaveLookup
+    );
     return {
       sicil: p.sicil,
       adSoyad: `${p.ad} ${p.soyad}`.trim() || p.sicil,
@@ -26,6 +35,8 @@ export default async function OzetPage({
       bolum: p.bolum,
       vardiya: gece ? "GECE" : "GUNDUZ",
       gerekenGun: s.bg,
+      izinliGun: s.izinliGun,
+      ucretsizIzinGun: s.ucretsizIzinGun,
       gelinenGun: s.cg,
       turnikeIci: s.net,
       turnikeDisi: s.mola,
@@ -34,7 +45,11 @@ export default async function OzetPage({
       netFark: -s.eksik, // eksik>0 => negatif fark
       hafta: s.cpd,
       turnikeKaydi: turnikeCountByS.get(p.sicil) ?? 0,
-      eksikGunler: missing.map((m) => ({ gs: m.gs, gun: gunAdi(m.date) })),
+      // Ücretli izinli günler gereken günden düşüldüğü için eksik listesinde
+      // görünmemeli; ücretsiz izin görünür ve sebebi etiketlenir.
+      eksikGunler: missing
+        .filter((m) => m.izin !== "ucretli")
+        .map((m) => ({ gs: m.gs, gun: gunAdi(m.date), izin: m.izin })),
     };
   });
 
@@ -46,7 +61,7 @@ export default async function OzetPage({
         range={range}
       />
       <div className="p-6">
-        <OzetTable rows={rows} />
+        <OzetTable rows={rows} izinVerisiVar={izinVerisiVar} />
       </div>
     </>
   );

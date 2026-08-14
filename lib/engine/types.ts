@@ -78,6 +78,14 @@ export interface SummaryResult {
   bekTotal: number;
   totalEksik: number;
   cpd: number; // hafta sonu çalışılan net
+  /**
+   * Ücretli izinli (yıllık/raporlu/mazeret/evlilik) olduğu için gereken günden
+   * düşülen hafta içi gün sayısı. Ücretsiz izin buraya GİRMEZ — o gün beklenen
+   * çalışma olarak sayılmaya devam eder.
+   */
+  izinliGun: number;
+  /** Ücretsiz izinli olup gelmediği hafta içi gün sayısı (eksik sayılır). */
+  ucretsizIzinGun: number;
   effSd: Date;
   effEd: Date;
 }

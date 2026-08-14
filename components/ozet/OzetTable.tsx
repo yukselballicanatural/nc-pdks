@@ -10,7 +10,9 @@ export interface OzetRow {
   unvan: string;
   bolum: string;
   vardiya: "GECE" | "GUNDUZ";
-  gerekenGun: number; // bg — dönemdeki hafta içi gün sayısı (herkes için aynı)
+  gerekenGun: number; // bg — hafta içi gün sayısı EKSİ ücretli izin günleri
+  izinliGun: number; // ücretli izin nedeniyle gerekenden düşülen gün
+  ucretsizIzinGun: number; // ücretsiz izin — gerekenden düşülmez, eksik yazar
   gelinenGun: number; // cg — çalışma kaydı olan gün sayısı
   turnikeIci: number; // net
   turnikeDisi: number; // mola
@@ -19,10 +21,16 @@ export interface OzetRow {
   netFark: number; // net - beklenen (pozitif = fazla)
   hafta: number; // cmt/paz net
   turnikeKaydi: number; // dönemdeki turnike (çalışma alanı) kayıt sayısı
-  eksikGunler: { gs: string; gun: string }[];
+  eksikGunler: { gs: string; gun: string; izin: "ucretli" | "ucretsiz" | null }[];
 }
 
-export default function OzetTable({ rows }: { rows: OzetRow[] }) {
+export default function OzetTable({
+  rows,
+  izinVerisiVar,
+}: {
+  rows: OzetRow[];
+  izinVerisiVar: boolean;
+}) {
   const [tl, setTl] = useState("");
   const [durum, setDurum] = useState("");
   const [detay, setDetay] = useState<OzetRow | null>(null);
@@ -94,6 +102,15 @@ export default function OzetTable({ rows }: { rows: OzetRow[] }) {
           <span style={{ color: r.gelinenGun < r.gerekenGun ? "var(--cl-danger)" : "var(--cl-ok)" }}>
             {r.gelinenGun}
           </span>
+          {r.izinliGun > 0 && (
+            <span
+              title={`${r.izinliGun} gün ücretli izin — gereken günden düşüldü`}
+              style={{ color: "var(--ac-cyan)" }}
+            >
+              {" "}
+              −{r.izinliGun}i
+            </span>
+          )}
         </span>
       ),
       sortValue: (r) => r.gelinenGun,
@@ -215,9 +232,26 @@ export default function OzetTable({ rows }: { rows: OzetRow[] }) {
           <span style={{ color: "var(--tx-primary)" }}>Turnike Kullananlar</span> seçin.
         </div>
       )}
-      <p className="mb-3 text-xs" style={{ color: "var(--tx-muted)" }}>
-        💡 Sütun başlığına tıkla = sırala · Satıra tıkla = eksik günleri gör
-      </p>
+      {izinVerisiVar ? (
+        <p className="mb-3 text-xs" style={{ color: "var(--tx-muted)" }}>
+          💡 Sütun başlığına tıkla = sırala · Satıra tıkla = eksik günleri gör ·{" "}
+          <span style={{ color: "var(--ac-cyan)" }}>−Ni</span> = o kadar gün ücretli izin
+          (yıllık/raporlu/mazeret) gereken günden düşüldü. Ücretsiz izin düşülmez, eksik yazar.
+        </p>
+      ) : (
+        <p
+          className="mb-3 rounded-xl px-3 py-2 text-xs leading-relaxed"
+          style={{
+            background: "rgba(251,191,36,0.1)",
+            border: "1px solid rgba(251,191,36,0.25)",
+            color: "#fbbf24",
+          }}
+        >
+          Kolay İK izin verisi şu an okunamıyor; eksik saat hesabı izinleri
+          <span style={{ color: "var(--tx-primary)" }}> dikkate almıyor</span>. Ücretli izinli günler
+          de eksik olarak görünür. Bağlantı düzeldiğinde düzelir (bkz. İzinler sayfası).
+        </p>
+      )}
       <DataTable
         rows={filtered}
         columns={columns}
@@ -313,6 +347,24 @@ export default function OzetTable({ rows }: { rows: OzetRow[] }) {
             >
               Gelmediği İş Günleri ({detay.eksikGunler.length})
             </div>
+            {(detay.izinliGun > 0 || detay.ucretsizIzinGun > 0) && (
+              <p className="mb-2 text-xs leading-relaxed" style={{ color: "var(--tx-secondary)" }}>
+                {detay.izinliGun > 0 && (
+                  <>
+                    <span style={{ color: "var(--ac-cyan)" }}>{detay.izinliGun} gün ücretli izin</span>{" "}
+                    gereken günden düşüldü, eksik saate yansımadı.{" "}
+                  </>
+                )}
+                {detay.ucretsizIzinGun > 0 && (
+                  <>
+                    <span style={{ color: "var(--cl-warn)" }}>
+                      {detay.ucretsizIzinGun} gün ücretsiz izin
+                    </span>{" "}
+                    eksik saat olarak sayıldı.
+                  </>
+                )}
+              </p>
+            )}
             {detay.eksikGunler.length === 0 ? (
               <p className="text-sm" style={{ color: "var(--cl-ok)" }}>
                 Tüm iş günlerinde kayıt var.
@@ -329,7 +381,22 @@ export default function OzetTable({ rows }: { rows: OzetRow[] }) {
                     }}
                   >
                     <span style={{ color: "var(--tx-primary)" }}>{d.gs}</span>
-                    <span style={{ color: "var(--tx-muted)" }}>{d.gun}</span>
+                    <span className="flex items-center gap-2">
+                      {d.izin === "ucretsiz" && (
+                        <span
+                          title="Ücretsiz izin — eksik saat olarak sayılır"
+                          className="rounded-full px-1.5 py-0.5 text-[10px]"
+                          style={{
+                            background: "rgba(251,191,36,0.12)",
+                            border: "1px solid rgba(251,191,36,0.3)",
+                            color: "#fbbf24",
+                          }}
+                        >
+                          ücretsiz izin
+                        </span>
+                      )}
+                      <span style={{ color: "var(--tx-muted)" }}>{d.gun}</span>
+                    </span>
                   </li>
                 ))}
               </ul>

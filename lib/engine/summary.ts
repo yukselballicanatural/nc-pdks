@@ -22,6 +22,28 @@ export interface StartEndLookup {
   getEndDate(sicil: string): Date | null;
 }
 
+/**
+ * İzin sorgusu (Kolay İK'dan). Kullanıcı kararı:
+ *   ÜCRETLİ izin (yıllık, raporlu, mazeret, evlilik) → o gün gereken günden
+ *     düşülür, eksik saat doğurmaz. Kişi izinliyken turnikeden geçmemesi normal.
+ *   ÜCRETSİZ izin → gereken gün olarak sayılmaya DEVAM eder, yani eksik yazar.
+ *
+ * Uygulanmayan izin verisi (lookup verilmezse) davranışı değiştirmez —
+ * hesap eskisiyle birebir aynı kalır.
+ */
+export interface LeaveLookup {
+  /** O gün ücretli izinli mi? */
+  ucretliIzinli(sicil: string, gs: string): boolean;
+  /** O gün ücretsiz izinli mi? */
+  ucretsizIzinli(sicil: string, gs: string): boolean;
+}
+
+/** İzin verisi olmadığında kullanılan boş sorgu. */
+export const NO_LEAVE: LeaveLookup = {
+  ucretliIzinli: () => false,
+  ucretsizIzinli: () => false,
+};
+
 export function getNet(
   sicil: string,
   gs: string,
@@ -68,7 +90,8 @@ export function summary(
   shifts: Map<string, ShiftResult>,
   cor: CorrectionLookup,
   lookup: StartEndLookup,
-  isGeceOf: boolean
+  isGeceOf: boolean,
+  leave: LeaveLookup = NO_LEAVE
 ): SummaryResult {
   const gece = isGeceOf;
   const std = gece ? N_NET : G_NET;
@@ -82,6 +105,8 @@ export function summary(
   let otherTotal = 0;
   let total = 0;
   let bg = 0;
+  let izinliGun = 0;
+  let ucretsizIzinGun = 0;
 
   for (let d = effSd; d <= effEd; d = addDays(d, 1)) {
     const gs = formatGs(d);
@@ -99,7 +124,25 @@ export function summary(
       }
       if (!isWeekday(d)) cpd += n;
     }
-    if (isWeekday(d)) bg += 1;
+
+    if (!isWeekday(d)) continue;
+
+    // Hafta sonu zaten gereken güne girmiyor, bu yüzden izin kontrolü yalnızca
+    // hafta içi için anlamlı.
+    if (n === 0 && leave.ucretliIzinli(sicil, gs)) {
+      // Ücretli izinli ve gelmemiş: gereken günden düş — eksik yazmasın.
+      // Geldiyse (n > 0) dokunmuyoruz; çalıştığı süre normal şekilde sayılır.
+      izinliGun += 1;
+      continue;
+    }
+
+    if (n === 0 && leave.ucretsizIzinli(sicil, gs)) {
+      // Ücretsiz izin: gereken gün olarak sayılır, eksik yazar. Yalnızca
+      // raporlama için işaretliyoruz.
+      ucretsizIzinGun += 1;
+    }
+
+    bg += 1;
   }
 
   const bek = bg * std;
@@ -118,6 +161,8 @@ export function summary(
     bekTotal,
     totalEksik: bekTotal - total,
     cpd,
+    izinliGun,
+    ucretsizIzinGun,
     effSd,
     effEd,
   };
@@ -127,6 +172,11 @@ export interface MissingDay {
   date: Date;
   gs: string;
   cor: Correction | undefined;
+  /**
+   * Gelmeme sebebi izinse hangi tür. "ucretli" olanlar eksik saate girmez,
+   * "ucretsiz" olanlar girer (bkz. summary).
+   */
+  izin: "ucretli" | "ucretsiz" | null;
 }
 
 export function getMissingDays(
@@ -135,7 +185,8 @@ export function getMissingDays(
   ed: Date,
   shifts: Map<string, ShiftResult>,
   cor: CorrectionLookup,
-  lookup: StartEndLookup
+  lookup: StartEndLookup,
+  leave: LeaveLookup = NO_LEAVE
 ): MissingDay[] {
   const effSd = dateOnly(getEffectiveStart(sicil, sd, lookup));
   const effEd = dateOnly(getEffectiveEnd(sicil, ed, lookup));
@@ -144,7 +195,14 @@ export function getMissingDays(
     if (isWeekday(d)) {
       const gs = formatGs(d);
       const n = getNet(sicil, gs, shifts, cor);
-      if (n === 0) missing.push({ date: d, gs, cor: cor.get(sicil, gs) });
+      if (n === 0) {
+        const izin = leave.ucretliIzinli(sicil, gs)
+          ? ("ucretli" as const)
+          : leave.ucretsizIzinli(sicil, gs)
+            ? ("ucretsiz" as const)
+            : null;
+        missing.push({ date: d, gs, cor: cor.get(sicil, gs), izin });
+      }
     }
   }
   return missing;

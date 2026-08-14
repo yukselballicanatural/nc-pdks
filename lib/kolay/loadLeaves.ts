@@ -5,10 +5,12 @@
 // şu an bu gün "hiç gelmemiş" sayılıyor. İzin kayıtları geldiğinde o günleri
 // işaretleyip eksik hesabından ayırabiliyoruz.
 //
-// ÖNEMLİ: Burada PDKS'in çalışma süresi hesabı DEĞİŞTİRİLMİYOR. İzin bilgisi
-// yalnızca ek bir işaret olarak sunuluyor — net/brüt dakikalar, eksik saat
-// formülü ve iş kuralı sabitleri olduğu gibi kalıyor. İzinli günlerin eksik
-// hesabından düşülmesi ayrı bir karar ve kullanıcı onayı gerektirir.
+// KULLANICI KARARI (uygulandı): ücretli izin eksik saat doğurmaz, ücretsiz izin
+// doğurur. Buradan üretilen LeaveLookup, lib/engine/summary.ts'e verilir:
+//   yıllık / raporlu / mazeret / evlilik (isPaid=true)  -> gereken günden düşülür
+//   ücretsiz izin (isPaid=false)                        -> gereken gün sayılır
+// Net/brüt dakika hesabı ve iş kuralı sabitleri DEĞİŞMEDİ; değişen tek şey o
+// günün "gereken gün" sayılıp sayılmadığı.
 import "server-only";
 import { cache } from "react";
 import { fetchKolayLeaves, KolayError, type KolayLeave } from "./client";
@@ -17,6 +19,7 @@ import { fetchKolayPersonsCache } from "../db/queries/kolayPersons";
 import { fetchPersonnel } from "../db/queries/materialized";
 import { addDays, formatGs } from "../engine/mesaiGunu";
 import { parseDateParam } from "../engine/tz";
+import type { LeaveLookup } from "../engine/summary";
 
 export interface LeaveRecord {
   sicil: string | null;
@@ -48,8 +51,10 @@ export interface LeavesData {
   eslesmeyen: number;
   /** Zayıf (kısmi) eşleşmeler — gözden geçirilmeli. */
   kismiEslesen: number;
-  /** sicil -> izinli vardiya günleri kümesi. */
-  izinliGunler: Map<string, Set<string>>;
+  /** sicil -> ücretli izinli gün kümesi (gs, dd.MM.yyyy). */
+  ucretliGunler: Map<string, Set<string>>;
+  /** sicil -> ücretsiz izinli gün kümesi. */
+  ucretsizGunler: Map<string, Set<string>>;
 }
 
 function leaveTypeName(l: KolayLeave): string {
@@ -143,12 +148,18 @@ export const loadLeavesData = cache(async function loadLeavesData(
     yetkiEksik = e instanceof KolayError && e.kind === "yetki";
   }
 
-  const izinliGunler = new Map<string, Set<string>>();
+  // Gün kümeleri ücretli/ücretsiz olarak ayrı tutulur — eksik saat kuralı
+  // ikisine farklı davranıyor.
+  const ucretliGunler = new Map<string, Set<string>>();
+  const ucretsizGunler = new Map<string, Set<string>>();
   for (const k of kayitlar) {
     if (!k.sicil) continue;
-    const set = izinliGunler.get(k.sicil) ?? new Set<string>();
+    // isPaid bilinmiyorsa (null) TEMKİNLİ davranıp ücretli saymıyoruz —
+    // yanlışlıkla eksik saat silmek, fazladan eksik göstermekten kötü.
+    const hedef = k.ucretli === true ? ucretliGunler : ucretsizGunler;
+    const set = hedef.get(k.sicil) ?? new Set<string>();
     for (const g of k.gunler) set.add(g);
-    izinliGunler.set(k.sicil, set);
+    hedef.set(k.sicil, set);
   }
 
   return {
@@ -160,6 +171,15 @@ export const loadLeavesData = cache(async function loadLeavesData(
     eslesen,
     eslesmeyen: personByS.size - eslesen,
     kismiEslesen,
-    izinliGunler,
+    ucretliGunler,
+    ucretsizGunler,
   };
 });
+
+/** LeaveLookup üretir — summary() bunu kullanarak gereken günü ayarlar. */
+export function leaveLookupOf(data: LeavesData): LeaveLookup {
+  return {
+    ucretliIzinli: (sicil, gs) => data.ucretliGunler.get(sicil)?.has(gs) ?? false,
+    ucretsizIzinli: (sicil, gs) => data.ucretsizGunler.get(sicil)?.has(gs) ?? false,
+  };
+}

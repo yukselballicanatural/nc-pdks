@@ -23,7 +23,9 @@ import {
   type PersonInfo,
 } from "../db/queries/materialized";
 import { supabaseServer } from "../db/supabaseServer";
-import type { CorrectionLookup, StartEndLookup } from "../engine/summary";
+import type { CorrectionLookup, LeaveLookup, StartEndLookup } from "../engine/summary";
+import { NO_LEAVE } from "../engine/summary";
+import { leaveLookupOf, loadLeavesData } from "../kolay/loadLeaves";
 import { getSession, type SessionPayload } from "../auth/session";
 import { cachedByKey } from "./periodCache";
 
@@ -82,6 +84,14 @@ export interface PdksData {
   corLookup: CorrectionLookup;
   startEndLookup: StartEndLookup;
   isGece: (sicil: string) => boolean;
+  /**
+   * İzin sorgusu. Ücretli izin günleri gereken günden düşülür, ücretsiz izin
+   * düşülmez (bkz. lib/engine/summary.ts). Kolay İK okunamazsa boş sorgu döner
+   * ve hesap izin öncesi davranışa geri düşer — sayfalar çalışmaya devam eder.
+   */
+  leaveLookup: LeaveLookup;
+  /** İzin verisi gerçekten yüklendi mi? Arayüzde uyarı göstermek için. */
+  izinVerisiVar: boolean;
   geceTl: string[];
   session: SessionPayload | null;
   /** TL modundaysa sadece bu TL'nin kişileri; admin'de null. */
@@ -115,6 +125,7 @@ async function buildPdksData(
     readerConfig,
     { rows: corrections, lookup: corLookup },
     geceTl,
+    izinler,
   ] = await Promise.all([
     fetchShifts(range.sdParam, range.edParam),
     fetchAlarms(range.sdParam, range.edParam),
@@ -123,6 +134,9 @@ async function buildPdksData(
     loadReaderConfig(),
     loadCorrections(),
     loadGeceTl(),
+    // Kolay İK erişilemezse loadLeavesData hata fırlatmaz; kullanilabilir=false
+    // döner ve aşağıda boş sorguya düşülür.
+    loadLeavesData(range.sdParam, range.edParam),
   ]);
 
   // Vardiya bilgisi henüz Supabase'de yok (kullanıcı kararı: şimdilik herkes gündüz).
@@ -158,6 +172,8 @@ async function buildPdksData(
     corLookup,
     startEndLookup,
     isGece,
+    leaveLookup: izinler.kullanilabilir ? leaveLookupOf(izinler) : NO_LEAVE,
+    izinVerisiVar: izinler.kullanilabilir,
     geceTl,
     session,
     tlFilter,
