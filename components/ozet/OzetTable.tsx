@@ -7,7 +7,7 @@ import { dkp, dks } from "@/lib/format";
 export interface OzetRow {
   sicil: string;
   adSoyad: string;
-  takimLideri: string;
+  unvan: string;
   bolum: string;
   vardiya: "GECE" | "GUNDUZ";
   gerekenGun: number; // bg — dönemdeki hafta içi gün sayısı (herkes için aynı)
@@ -28,14 +28,14 @@ export default function OzetTable({ rows }: { rows: OzetRow[] }) {
   const [detay, setDetay] = useState<OzetRow | null>(null);
 
   const tlList = useMemo(
-    () => [...new Set(rows.map((r) => r.takimLideri).filter(Boolean))].sort((a, b) => a.localeCompare(b, "tr")),
+    () => [...new Set(rows.map((r) => r.unvan).filter(Boolean))].sort((a, b) => a.localeCompare(b, "tr")),
     [rows]
   );
 
   const filtered = useMemo(
     () =>
       rows.filter((r) => {
-        if (tl && r.takimLideri !== tl) return false;
+        if (tl && r.unvan !== tl) return false;
         if (durum === "Turnike Kullananlar" && r.turnikeKaydi === 0) return false;
         if (durum === "Turnike Kullanmayanlar" && r.turnikeKaydi > 0) return false;
         if (durum === "Eksik" && (r.netFark >= 0 || r.turnikeKaydi === 0)) return false;
@@ -64,13 +64,13 @@ export default function OzetTable({ rows }: { rows: OzetRow[] }) {
     },
     {
       key: "tl",
-      header: "Takım Lideri",
+      header: "Ünvan",
       cell: (r) => (
-        <span style={{ color: r.takimLideri === "Bilinmiyor" ? "var(--cl-danger)" : "var(--tx-secondary)" }}>
-          {r.takimLideri}
+        <span style={{ color: r.unvan === "Bilinmiyor" ? "var(--cl-danger)" : "var(--tx-secondary)" }}>
+          {r.unvan}
         </span>
       ),
-      sortValue: (r) => r.takimLideri,
+      sortValue: (r) => r.unvan,
     },
     {
       key: "vardiya",
@@ -222,10 +222,10 @@ export default function OzetTable({ rows }: { rows: OzetRow[] }) {
         rows={filtered}
         columns={columns}
         rowKey={(r) => r.sicil}
-        searchText={(r) => `${r.sicil} ${r.adSoyad} ${r.takimLideri} ${r.bolum}`}
+        searchText={(r) => `${r.sicil} ${r.adSoyad} ${r.unvan} ${r.bolum}`}
         searchPlaceholder="Ad, soyad, sicil veya bölüm ara..."
         filters={[
-          { label: "Tüm Takım Liderleri", options: tlList, value: tl, onChange: setTl },
+          { label: "Tüm Ünvanlar", options: tlList, value: tl, onChange: setTl },
           {
             label: "Tüm Durumlar",
             options: [
@@ -273,7 +273,7 @@ export default function OzetTable({ rows }: { rows: OzetRow[] }) {
               {detay.adSoyad}
             </div>
             <div className="mb-5 text-sm" style={{ color: "var(--tx-secondary)" }}>
-              {detay.takimLideri} · Sicil {detay.sicil}
+              {detay.unvan} · Sicil {detay.sicil}
             </div>
 
             <div className="mb-4 grid grid-cols-2 gap-3 text-sm">

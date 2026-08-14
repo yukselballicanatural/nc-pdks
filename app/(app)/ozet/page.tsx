@@ -22,7 +22,7 @@ export default async function OzetPage({
     return {
       sicil: p.sicil,
       adSoyad: `${p.ad} ${p.soyad}`.trim() || p.sicil,
-      takimLideri: p.takimLideri,
+      unvan: p.unvan || "Bilinmiyor",
       bolum: p.bolum,
       vardiya: gece ? "GECE" : "GUNDUZ",
       gerekenGun: s.bg,

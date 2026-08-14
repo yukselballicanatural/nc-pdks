@@ -51,10 +51,10 @@ export default async function DashboardPage({
     else if (s.eksik > 0) eksikOlan++;
     else tamamOlan++;
 
-    const cur = tlEksik.get(p.takimLideri) ?? { eksik: 0, kisi: 0 };
+    const cur = tlEksik.get(p.unvan || "Bilinmiyor") ?? { eksik: 0, kisi: 0 };
     cur.eksik += Math.max(0, s.eksik);
     cur.kisi += 1;
-    tlEksik.set(p.takimLideri, cur);
+    tlEksik.set(p.unvan || "Bilinmiyor", cur);
   }
 
   // Günlük trend

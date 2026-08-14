@@ -10,7 +10,7 @@ export interface DetayRow {
   key: string;
   sicil: string;
   adSoyad: string;
-  takimLideri: string;
+  unvan: string;
   tarih: string; // dd.MM.yyyy
   gun: string;
   giris: string | null;
@@ -32,14 +32,14 @@ export default function DetayTable({ rows, canEdit }: { rows: DetayRow[]; canEdi
   const [edit, setEdit] = useState<DetayRow | null>(null);
 
   const tlList = useMemo(
-    () => [...new Set(rows.map((r) => r.takimLideri).filter(Boolean))].sort((a, b) => a.localeCompare(b, "tr")),
+    () => [...new Set(rows.map((r) => r.unvan).filter(Boolean))].sort((a, b) => a.localeCompare(b, "tr")),
     [rows]
   );
 
   const filtered = useMemo(
     () =>
       rows.filter((r) => {
-        if (tl && r.takimLideri !== tl) return false;
+        if (tl && r.unvan !== tl) return false;
         if (tip === "Kayıt Yok" && r.hasData) return false;
         if (tip === "Eksik Çalışma" && (!r.hasData || r.netFark >= 0)) return false;
         if (tip === "Düzeltilmiş" && !r.duzeltmeNeden) return false;
@@ -158,7 +158,7 @@ export default function DetayTable({ rows, canEdit }: { rows: DetayRow[]; canEdi
         searchText={(r) => `${r.sicil} ${r.adSoyad} ${r.tarih}`}
         searchPlaceholder="Ad, soyad, sicil veya tarih ara..."
         filters={[
-          { label: "Tüm Takım Liderleri", options: tlList, value: tl, onChange: setTl },
+          { label: "Tüm Ünvanlar", options: tlList, value: tl, onChange: setTl },
           {
             label: "Tüm Kayıtlar",
             options: ["Kayıt Yok", "Eksik Çalışma", "Düzeltilmiş", "Hafta Sonu"],

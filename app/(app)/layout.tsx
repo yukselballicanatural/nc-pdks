@@ -15,10 +15,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <Suspense
         fallback={
           <div
-            className="w-56 shrink-0"
+            className="w-[220px] shrink-0"
             style={{
-              background: "rgba(6,12,24,0.75)",
-              borderRight: "1px solid rgba(255,255,255,0.07)",
+              background: "rgba(5,9,26,0.80)",
+              borderRight: "1px solid rgba(255,255,255,0.085)",
             }}
           />
         }

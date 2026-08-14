@@ -25,6 +25,7 @@ import {
 import { supabaseServer } from "../db/supabaseServer";
 import type { CorrectionLookup, StartEndLookup } from "../engine/summary";
 import { getSession, type SessionPayload } from "../auth/session";
+import { cachedByKey } from "./periodCache";
 
 export type { PersonInfo };
 
@@ -94,6 +95,18 @@ export const loadPdksData = cache(async function loadPdksData(
   const session = await getSession();
   const tlFilter = session?.role === "tl" ? session.tlName : null;
 
+  // Dönem + yetki aynıysa 60 sn boyunca sorguları tekrarlamayız (sayfalar arası
+  // gezinme bunun sayesinde ağ turu beklemez). isGece gibi kapanış içeren alanlar
+  // saf fonksiyonlardan üretildiği için paylaşılması güvenli.
+  const key = `${range.sdParam}|${range.edParam}|${tlFilter ?? "*"}`;
+  return cachedByKey(key, () => buildPdksData(range, session, tlFilter));
+});
+
+async function buildPdksData(
+  range: DateRange,
+  session: SessionPayload | null,
+  tlFilter: string | null
+): Promise<PdksData> {
   const [
     { shifts, otherReadersByKey, turnikeCountByS },
     alarmRes,
@@ -149,7 +162,7 @@ export const loadPdksData = cache(async function loadPdksData(
     session,
     tlFilter,
   };
-});
+}
 
 /**
  * Görünür kişiler: TL modunda yalnızca kendi takımı. Ada göre sıralı.
@@ -163,7 +176,7 @@ export function visiblePeople(data: PdksData): PersonInfo[] {
   for (const c of data.corrections) active.add(c.sicil);
 
   const all = [...data.personByS.values()].filter((p) => active.has(p.sicil));
-  const filtered = data.tlFilter ? all.filter((p) => p.takimLideri === data.tlFilter) : all;
+  const filtered = data.tlFilter ? all.filter((p) => p.unvan === data.tlFilter) : all;
 
   return filtered.sort((a, b) => {
     const an = `${a.ad} ${a.soyad}`.trim();

@@ -28,7 +28,7 @@ export async function getAlarmDayRecordsAction(
     const data = await loadPdksData({ sd, ed });
 
     // TL modunda sadece kendi takımının kaydını görebilir.
-    if (data.tlFilter && data.personByS.get(sicil)?.takimLideri !== data.tlFilter) {
+    if (data.tlFilter && data.personByS.get(sicil)?.unvan !== data.tlFilter) {
       throw new Error("Bu kayda erişim yetkiniz yok.");
     }
 

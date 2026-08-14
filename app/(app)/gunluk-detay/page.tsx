@@ -34,7 +34,7 @@ export default async function GunlukDetayPage({
         key: `${p.sicil}-${gs}`,
         sicil: p.sicil,
         adSoyad,
-        takimLideri: p.takimLideri,
+        unvan: p.unvan || "Bilinmiyor",
         tarih: gs,
         gun: gunAdi(d),
         giris: sh ? formatGsHms(sh.g) : null,

@@ -19,7 +19,7 @@ export default async function BuddyPunchPage({
   const { range, personByS, readerConfig, buddy, tlFilter } = data;
 
   const rows: LogRow[] = buddy
-    .filter((r) => !tlFilter || personByS.get(r.sicil)?.takimLideri === tlFilter)
+    .filter((r) => !tlFilter || personByS.get(r.sicil)?.unvan === tlFilter)
     .map((r, i) => {
       const p = personByS.get(r.sicil);
       const dir = readerDirection(r.ok);
@@ -32,7 +32,7 @@ export default async function BuddyPunchPage({
         yon: dir === "in" ? "Giriş" : dir === "out" ? "Çıkış" : "-",
         sicil: r.sicil,
         adSoyad: p ? `${p.ad} ${p.soyad}`.trim() || r.sicil : r.sicil,
-        takimLideri: p?.takimLideri ?? "Bilinmiyor",
+        unvan: p?.unvan || "Bilinmiyor",
         buddy: true,
       };
     });

@@ -45,6 +45,48 @@ function norm(s: string): string {
     .replace(/[̀-ͯ]/g, "");
 }
 
+/* Sıralama ok SVG'leri */
+function ChevronUp({ active }: { active: boolean }) {
+  return (
+    <svg
+      width="10"
+      height="10"
+      viewBox="0 0 12 12"
+      fill="none"
+      aria-hidden
+      style={{
+        display: "inline",
+        marginLeft: 3,
+        color: active ? "var(--ac-sky)" : "var(--tx-disabled)",
+        verticalAlign: "middle",
+        transition: "color 0.15s",
+      }}
+    >
+      <path d="M2 8l4-4 4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+function ChevronDown({ active }: { active: boolean }) {
+  return (
+    <svg
+      width="10"
+      height="10"
+      viewBox="0 0 12 12"
+      fill="none"
+      aria-hidden
+      style={{
+        display: "inline",
+        marginLeft: 3,
+        color: active ? "var(--ac-sky)" : "var(--tx-disabled)",
+        verticalAlign: "middle",
+        transition: "color 0.15s",
+      }}
+    >
+      <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export default function DataTable<T>({
   rows,
   columns,
@@ -98,18 +140,36 @@ export default function DataTable<T>({
     <div>
       {/* Toolbar */}
       {(searchText || filters?.length || toolbarExtra) && (
-        <div className="mb-3 flex flex-wrap items-center gap-2">
+        <div className="mb-3.5 flex flex-wrap items-center gap-2">
           {searchText && (
-            <input
-              type="text"
-              placeholder={searchPlaceholder}
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setLimit(pageSize);
-              }}
-              className="input-glass w-64 px-3 py-1.5 text-sm"
-            />
+            <div className="relative">
+              {/* Arama ikonu */}
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"
+                style={{ color: "var(--tx-muted)" }}
+              >
+                <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+              </svg>
+              <input
+                type="text"
+                placeholder={searchPlaceholder}
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setLimit(pageSize);
+                }}
+                className="input-glass w-64 pl-8 pr-3 py-2 text-sm"
+              />
+            </div>
           )}
           {filters?.map((f) => (
             <select
@@ -119,7 +179,7 @@ export default function DataTable<T>({
                 f.onChange(e.target.value);
                 setLimit(pageSize);
               }}
-              className="input-glass max-w-56 px-2 py-1.5 text-sm"
+              className="input-glass max-w-56 px-2 py-2 text-sm"
             >
               <option value="">{f.label}</option>
               {f.options.map((o) => (
@@ -131,7 +191,7 @@ export default function DataTable<T>({
           ))}
           {toolbarExtra}
           <span
-            className="ml-auto text-xs"
+            className="ml-auto text-xs tabular-nums"
             style={{ color: "var(--tx-muted)" }}
           >
             {sorted.length.toLocaleString("tr-TR")} kayıt
@@ -150,41 +210,27 @@ export default function DataTable<T>({
                 <th
                   key={c.key}
                   onClick={() => toggleSort(c)}
-                  style={c.width ? { width: c.width, color: "var(--tx-secondary)" } : { color: "var(--tx-secondary)" }}
-                  className={`whitespace-nowrap px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wider ${
+                  style={
+                    c.width
+                      ? { width: c.width, color: "var(--tx-secondary)" }
+                      : { color: "var(--tx-secondary)" }
+                  }
+                  className={`whitespace-nowrap px-3 py-3 text-[10.5px] font-semibold uppercase tracking-wider ${
                     c.align === "right"
                       ? "text-right"
                       : c.align === "center"
                         ? "text-center"
                         : "text-left"
-                  } ${c.sortValue ? "cursor-pointer select-none" : ""}`}
+                  } ${c.sortValue ? "cursor-pointer select-none hover:text-[var(--tx-primary)] transition-colors duration-150" : ""}`}
                 >
-                  <span
-                    style={
-                      c.sortValue
-                        ? { transition: "color 0.15s" }
-                        : undefined
-                    }
-                    onMouseEnter={(e) => {
-                      if (c.sortValue)
-                        (e.currentTarget as HTMLElement).style.color =
-                          "var(--tx-primary)";
-                    }}
-                    onMouseLeave={(e) => {
-                      if (c.sortValue)
-                        (e.currentTarget as HTMLElement).style.color = "";
-                    }}
-                  >
-                    {c.header}
-                  </span>
-                  {sortKey === c.key && (
-                    <span
-                      className="ml-1 text-xs"
-                      style={{ color: "var(--ac-sky)" }}
-                    >
-                      {sortDir === "asc" ? "↑" : "↓"}
-                    </span>
-                  )}
+                  {c.header}
+                  {c.sortValue && sortKey === c.key
+                    ? sortDir === "asc"
+                      ? <ChevronUp active />
+                      : <ChevronDown active />
+                    : c.sortValue
+                      ? <ChevronUp active={false} />
+                      : null}
                 </th>
               ))}
             </tr>
@@ -198,33 +244,36 @@ export default function DataTable<T>({
                   rowClass?.(r) ?? ""
                 }`}
                 style={{
-                  borderTop: "1px solid rgba(255,255,255,0.05)",
-                  transition: "background 0.1s",
+                  borderTop: "1px solid rgba(255,255,255,0.048)",
+                  transition: "background 0.12s",
                   background:
                     idx % 2 === 0
-                      ? "rgba(255,255,255,0.01)"
+                      ? "rgba(255,255,255,0.013)"
                       : "transparent",
                 }}
                 onMouseEnter={(e) => {
                   (e.currentTarget as HTMLTableRowElement).style.background =
-                    "rgba(56,189,248,0.05)";
+                    "rgba(56,189,248,0.055)";
                 }}
                 onMouseLeave={(e) => {
                   (e.currentTarget as HTMLTableRowElement).style.background =
-                    idx % 2 === 0 ? "rgba(255,255,255,0.01)" : "transparent";
+                    idx % 2 === 0 ? "rgba(255,255,255,0.013)" : "transparent";
                 }}
               >
                 {columns.map((c) => (
                   <td
                     key={c.key}
-                    className={`px-3 py-1.5 ${
+                    className={`px-3 py-2 ${
                       c.align === "right"
                         ? "text-right tabular-nums"
                         : c.align === "center"
                           ? "text-center"
                           : "text-left"
                     }`}
-                    style={{ color: "var(--tx-primary)" }}
+                    style={{
+                      color: "var(--tx-primary)",
+                      fontFeatureSettings: c.align === "right" ? '"tnum"' : undefined,
+                    }}
                   >
                     {c.cell(r)}
                   </td>
@@ -235,10 +284,15 @@ export default function DataTable<T>({
               <tr>
                 <td
                   colSpan={columns.length}
-                  className="px-3 py-10 text-center text-sm"
+                  className="px-3 py-12 text-center text-sm"
                   style={{ color: "var(--tx-muted)" }}
                 >
-                  {emptyText}
+                  <div className="flex flex-col items-center gap-3">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--tx-disabled)" }} aria-hidden>
+                      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35M11 8v6M8 11h6"/>
+                    </svg>
+                    {emptyText}
+                  </div>
                 </td>
               </tr>
             )}
@@ -248,35 +302,16 @@ export default function DataTable<T>({
 
       {/* Daha fazla */}
       {sorted.length > visible.length && (
-        <div className="mt-3 text-center">
+        <div className="mt-4 text-center">
           <button
             onClick={() => setLimit((l) => l + pageSize)}
-            className="rounded-xl px-5 py-2 text-sm transition-all duration-150"
-            style={{
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.09)",
-              color: "var(--tx-secondary)",
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.background =
-                "rgba(56,189,248,0.08)";
-              (e.currentTarget as HTMLButtonElement).style.borderColor =
-                "rgba(56,189,248,0.2)";
-              (e.currentTarget as HTMLButtonElement).style.color =
-                "var(--tx-primary)";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.background =
-                "rgba(255,255,255,0.04)";
-              (e.currentTarget as HTMLButtonElement).style.borderColor =
-                "rgba(255,255,255,0.09)";
-              (e.currentTarget as HTMLButtonElement).style.color =
-                "var(--tx-secondary)";
-            }}
+            className="btn-ghost inline-flex items-center gap-2 px-5 py-2 text-sm"
           >
-            Daha fazla göster (
-            {(sorted.length - visible.length).toLocaleString("tr-TR")} kayıt
-            kaldı)
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M6 9l6 6 6-6"/>
+            </svg>
+            Daha fazla göster —{" "}
+            {(sorted.length - visible.length).toLocaleString("tr-TR")} kayıt kaldı
           </button>
         </div>
       )}

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { invalidateAll } from "@/lib/data/periodCache";
 import { getSession } from "@/lib/auth/session";
 import { deleteCorrection, upsertCorrection } from "@/lib/db/queries/corrections";
 
@@ -34,6 +35,7 @@ export async function saveCorrectionAction(input: {
       yeniMin,
       acik: input.acik,
     });
+    invalidateAll();
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (e) {
@@ -48,6 +50,7 @@ export async function deleteCorrectionAction(
   try {
     await requireAdmin();
     await deleteCorrection(sicil, tarih);
+    invalidateAll();
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (e) {

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { runSync, syncStatus } from "@/lib/sync/runSync";
+import { invalidateAll } from "@/lib/data/periodCache";
 
 // Tam yeniden hesaplama parça parça yapılır (her çağrı birkaç gün) — serverless
 // zaman limitine sığsın diye. İstemci `done: false` gelirse tekrar çağırır.
@@ -25,6 +26,8 @@ export async function POST(req: Request) {
 
   try {
     const result = await runSync({ force });
+    // Materyalize tablolar değişti; dönem önbelleği artık eski veriyi tutuyor.
+    invalidateAll();
     return NextResponse.json(result);
   } catch (e) {
     return NextResponse.json(

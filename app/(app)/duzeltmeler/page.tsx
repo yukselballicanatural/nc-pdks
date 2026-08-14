@@ -16,7 +16,7 @@ export default async function DuzeltmelerPage({
   const { corrections, personByS, tlFilter, session } = data;
 
   const rows: DuzeltmeRow[] = corrections
-    .filter((c) => !tlFilter || personByS.get(c.sicil)?.takimLideri === tlFilter)
+    .filter((c) => !tlFilter || personByS.get(c.sicil)?.unvan === tlFilter)
     .map((c) => ({
       key: `${c.sicil}::${c.tarih}`,
       sicil: c.sicil,

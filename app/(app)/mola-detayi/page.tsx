@@ -35,7 +35,7 @@ export default async function MolaDetayiPage({
         key: `${p.sicil}-${gs}`,
         sicil: p.sicil,
         adSoyad,
-        takimLideri: p.takimLideri,
+        unvan: p.unvan || "Bilinmiyor",
         tarih: gs,
         vardiya: gece ? "Gece" : "Gündüz",
         net: getNet(p.sicil, gs, shifts, corLookup),

@@ -12,7 +12,7 @@ export interface LogRow {
   yon: string;
   sicil: string;
   adSoyad: string;
-  takimLideri: string;
+  unvan: string;
   buddy: boolean;
 }
 
@@ -22,7 +22,7 @@ export default function LogTable({ rows, showBuddyFlag }: { rows: LogRow[]; show
   const [alan, setAlan] = useState("");
 
   const tlList = useMemo(
-    () => [...new Set(rows.map((r) => r.takimLideri).filter(Boolean))].sort((a, b) => a.localeCompare(b, "tr")),
+    () => [...new Set(rows.map((r) => r.unvan).filter(Boolean))].sort((a, b) => a.localeCompare(b, "tr")),
     [rows]
   );
   const okuyucuList = useMemo(
@@ -33,7 +33,7 @@ export default function LogTable({ rows, showBuddyFlag }: { rows: LogRow[]; show
   const filtered = useMemo(
     () =>
       rows.filter((r) => {
-        if (tl && r.takimLideri !== tl) return false;
+        if (tl && r.unvan !== tl) return false;
         if (okuyucu && r.okuyucu !== okuyucu) return false;
         if (alan && r.alan !== alan) return false;
         return true;
@@ -77,7 +77,7 @@ export default function LogTable({ rows, showBuddyFlag }: { rows: LogRow[]; show
       ),
       sortValue: (r) => r.yon,
     },
-    { key: "tl", header: "Takım Lideri", cell: (r) => <span className="text-slate-500">{r.takimLideri}</span>, sortValue: (r) => r.takimLideri },
+    { key: "tl", header: "Ünvan", cell: (r) => <span className="text-slate-500">{r.unvan}</span>, sortValue: (r) => r.unvan },
     ...(showBuddyFlag
       ? [
           {
@@ -100,7 +100,7 @@ export default function LogTable({ rows, showBuddyFlag }: { rows: LogRow[]; show
       searchText={(r) => `${r.sicil} ${r.adSoyad} ${r.okuyucu} ${r.tarih} ${r.saat}`}
       searchPlaceholder="Ad, soyad, sicil, okuyucu veya tarih ara..."
       filters={[
-        { label: "Tüm Takım Liderleri", options: tlList, value: tl, onChange: setTl },
+        { label: "Tüm Ünvanlar", options: tlList, value: tl, onChange: setTl },
         { label: "Tüm Okuyucular", options: okuyucuList, value: okuyucu, onChange: setOkuyucu },
         { label: "Tüm Alanlar", options: ["Çalışma", "Mola/Dışı", "Yoksayılan"], value: alan, onChange: setAlan },
       ]}

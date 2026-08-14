@@ -63,6 +63,7 @@ export interface PersonInfo {
   sicil: string;
   ad: string;
   soyad: string;
+  /** Bağlı direktörlük — kapsam satışa sabitlendiği için tüm kayıtlarda aynı. */
   takimLideri: string;
   bolum: string;
   firma: string;

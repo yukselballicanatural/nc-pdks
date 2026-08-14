@@ -8,7 +8,7 @@ export interface MolaRow {
   key: string;
   sicil: string;
   adSoyad: string;
-  takimLideri: string;
+  unvan: string;
   tarih: string;
   vardiya: string;
   net: number;
@@ -26,14 +26,14 @@ export default function MolaTable({ rows }: { rows: MolaRow[] }) {
   const [detay, setDetay] = useState<MolaRow | null>(null);
 
   const tlList = useMemo(
-    () => [...new Set(rows.map((r) => r.takimLideri).filter(Boolean))].sort((a, b) => a.localeCompare(b, "tr")),
+    () => [...new Set(rows.map((r) => r.unvan).filter(Boolean))].sort((a, b) => a.localeCompare(b, "tr")),
     [rows]
   );
 
   const filtered = useMemo(
     () =>
       rows.filter((r) => {
-        if (tl && r.takimLideri !== tl) return false;
+        if (tl && r.unvan !== tl) return false;
         if (esik === "2 saatten fazla" && r.mola <= 120) return false;
         if (esik === "3 saatten fazla" && r.mola <= 180) return false;
         return true;
@@ -56,9 +56,9 @@ export default function MolaTable({ rows }: { rows: MolaRow[] }) {
     },
     {
       key: "tl",
-      header: "Takım Lideri",
-      cell: (r) => <span style={{ color: "var(--tx-muted)" }}>{r.takimLideri}</span>,
-      sortValue: (r) => r.takimLideri,
+      header: "Ünvan",
+      cell: (r) => <span style={{ color: "var(--tx-muted)" }}>{r.unvan}</span>,
+      sortValue: (r) => r.unvan,
     },
     {
       key: "net",
@@ -129,7 +129,7 @@ export default function MolaTable({ rows }: { rows: MolaRow[] }) {
         searchText={(r) => `${r.sicil} ${r.adSoyad} ${r.tarih}`}
         searchPlaceholder="Ad, soyad, sicil veya tarih ara..."
         filters={[
-          { label: "Tüm Takım Liderleri", options: tlList, value: tl, onChange: setTl },
+          { label: "Tüm Ünvanlar", options: tlList, value: tl, onChange: setTl },
           { label: "Tüm Molalar", options: ["2 saatten fazla", "3 saatten fazla"], value: esik, onChange: setEsik },
         ]}
         onRowClick={(r) => setDetay(r)}

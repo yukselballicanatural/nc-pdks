@@ -18,7 +18,7 @@ export default async function PdksAlarmPage({
   // Alarmlar en yeniden eskiye sıralı gelir ve sayı sınırlıdır (açıklama metinleri
   // hacimli); tip bazlı sayaçlar dönemin tamamı üzerinden ayrı hesaplanır.
   const rows: AlarmRow[] = alarms
-    .filter((a) => !tlFilter || personByS.get(a.sicil)?.takimLideri === tlFilter)
+    .filter((a) => !tlFilter || personByS.get(a.sicil)?.unvan === tlFilter)
     .map((a, i) => {
       const p = personByS.get(a.sicil);
       return {
@@ -27,7 +27,7 @@ export default async function PdksAlarmPage({
         tipLabel: ALARM_TIPLERI[a.tip],
         sicil: a.sicil,
         adSoyad: p ? `${p.ad} ${p.soyad}`.trim() || a.sicil : a.sicil,
-        takimLideri: p?.takimLideri ?? "Bilinmiyor",
+        unvan: p?.unvan || "Bilinmiyor",
         tarih: formatGs(a.mg),
         saat: formatHms(a.dt),
         okuyucu: a.ok,

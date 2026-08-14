@@ -12,7 +12,7 @@ export interface AlarmRow {
   tipLabel: string;
   sicil: string;
   adSoyad: string;
-  takimLideri: string;
+  unvan: string;
   tarih: string;
   saat: string;
   okuyucu: string;
@@ -92,17 +92,17 @@ export default function AlarmTable({
   const counts = useMemo(() => {
     if (!tl) return totalCounts;
     const c: Record<AlarmTip, number> = { TURNIKESIZ_CIKIS: 0, KART_BASMA: 0, TURNIKE_ATLAMA: 0 };
-    for (const r of rows) if (r.takimLideri === tl) c[r.tip]++;
+    for (const r of rows) if (r.unvan === tl) c[r.tip]++;
     return c;
   }, [rows, tl, totalCounts]);
 
   const tlList = useMemo(
-    () => [...new Set(rows.map((r) => r.takimLideri).filter(Boolean))].sort((a, b) => a.localeCompare(b, "tr")),
+    () => [...new Set(rows.map((r) => r.unvan).filter(Boolean))].sort((a, b) => a.localeCompare(b, "tr")),
     [rows]
   );
 
   const filtered = useMemo(
-    () => rows.filter((r) => aktif[r.tip] && (!tl || r.takimLideri === tl)),
+    () => rows.filter((r) => aktif[r.tip] && (!tl || r.unvan === tl)),
     [rows, aktif, tl]
   );
 
@@ -150,9 +150,9 @@ export default function AlarmTable({
     },
     {
       key: "tl",
-      header: "Takım Lideri",
-      cell: (r) => <span style={{ color: "var(--tx-muted)" }}>{r.takimLideri}</span>,
-      sortValue: (r) => r.takimLideri,
+      header: "Ünvan",
+      cell: (r) => <span style={{ color: "var(--tx-muted)" }}>{r.unvan}</span>,
+      sortValue: (r) => r.unvan,
     },
   ];
 
@@ -192,7 +192,7 @@ export default function AlarmTable({
         rowKey={(r) => r.key}
         searchText={(r) => `${r.sicil} ${r.adSoyad} ${r.okuyucu} ${r.tarih}`}
         searchPlaceholder="Ad, soyad, sicil veya okuyucu ara..."
-        filters={[{ label: "Tüm Takım Liderleri", options: tlList, value: tl, onChange: setTl }]}
+        filters={[{ label: "Tüm Ünvanlar", options: tlList, value: tl, onChange: setTl }]}
         onRowClick={(r) => setDetay(r)}
         emptyText="Seçili filtrelerde alarm yok."
         pageSize={150}
@@ -221,7 +221,7 @@ export default function AlarmTable({
               {detay.adSoyad}
             </div>
             <div className="mb-4 text-sm" style={{ color: "var(--tx-secondary)" }}>
-              {detay.tarih} vardiya günü · Sicil {detay.sicil} · {detay.takimLideri}
+              {detay.tarih} vardiya günü · Sicil {detay.sicil} · {detay.unvan}
             </div>
 
             <div

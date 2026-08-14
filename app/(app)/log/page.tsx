@@ -32,7 +32,7 @@ export default async function LogPage({
   const rows: LogRow[] = [];
   for (const r of rawRows) {
     const p = personByS.get(r.sicil_no);
-    if (tlFilter && p?.takimLideri !== tlFilter) continue;
+    if (tlFilter && p?.unvan !== tlFilter) continue;
 
     const dt = utcIsoToWallClock(r.event_time);
     const mg = mesaiGunu(dt, isGece(r.sicil_no));
@@ -50,7 +50,7 @@ export default async function LogPage({
       adSoyad: p
         ? `${p.ad} ${p.soyad}`.trim() || r.sicil_no
         : `${r.ad ?? ""} ${r.soyad ?? ""}`.trim() || r.sicil_no,
-      takimLideri: p?.takimLideri ?? "Bilinmiyor",
+      unvan: p?.unvan || "Bilinmiyor",
       buddy: buddySet.has(`${r.sicil_no}::${dt.getTime()}`),
     });
   }

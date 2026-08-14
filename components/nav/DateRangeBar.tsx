@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useTransition } from "react";
+import RangeCalendar from "./RangeCalendar";
 
 /** Hızlı dönem kısayolları — dönemin herkes için aynı olduğunu netleştirir. */
 function presets(todayParam: string) {
@@ -16,11 +17,11 @@ function presets(todayParam: string) {
   const prevMonthStart = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 1, 1));
   const prevMonthEnd = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 0));
   return [
-    { label: "Bu Ay", sd: iso(monthStart), ed: iso(today) },
-    { label: "Geçen Ay", sd: iso(prevMonthStart), ed: iso(prevMonthEnd) },
-    { label: "Son 7 Gün", sd: iso(shift(-6)), ed: iso(today) },
-    { label: "Son 14 Gün", sd: iso(shift(-13)), ed: iso(today) },
-    { label: "Son 30 Gün", sd: iso(shift(-29)), ed: iso(today) },
+    { label: "Bu Ay",     sd: iso(monthStart),    ed: iso(today) },
+    { label: "Geçen Ay",  sd: iso(prevMonthStart), ed: iso(prevMonthEnd) },
+    { label: "7 Gün",     sd: iso(shift(-6)),      ed: iso(today) },
+    { label: "14 Gün",    sd: iso(shift(-13)),     ed: iso(today) },
+    { label: "30 Gün",    sd: iso(shift(-29)),     ed: iso(today) },
   ];
 }
 
@@ -39,87 +40,55 @@ export default function DateRangeBar({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [localSd, setLocalSd] = useState(sd);
-  const [localEd, setLocalEd] = useState(ed);
+  const [pending, startTransition] = useTransition();
 
   function apply(nextSd: string, nextEd: string) {
     const params = new URLSearchParams(searchParams.toString());
     params.set("sd", nextSd);
     params.set("ed", nextEd);
-    router.push(`?${params.toString()}`);
+    startTransition(() => router.push(`?${params.toString()}`));
   }
 
   const ps = presets(today);
 
   return (
     <div
-      className="flex flex-wrap items-center gap-2 px-5 py-2.5"
+      className="relative flex flex-wrap items-center gap-2.5 px-5 py-2.5"
       style={{
-        background: "rgba(6,12,24,0.6)",
-        backdropFilter: "blur(12px)",
-        WebkitBackdropFilter: "blur(12px)",
-        borderBottom: "1px solid rgba(255,255,255,0.06)",
+        background: "rgba(5,9,26,0.55)",
+        backdropFilter: "blur(14px)",
+        WebkitBackdropFilter: "blur(14px)",
+        borderBottom: "1px solid var(--glass-border)",
       }}
     >
+      {/* Gezinme yükleniyor çizgisi */}
+      {pending && (
+        <span
+          aria-hidden
+          className="link-pending absolute inset-x-0 bottom-0 h-0.5"
+          style={{ background: "transparent" }}
+        />
+      )}
+
+      {/* Dönem etiketi */}
       <span
-        className="text-[10px] font-semibold uppercase tracking-widest"
+        className="text-[10px] font-semibold uppercase tracking-[0.12em]"
         style={{ color: "var(--tx-muted)" }}
       >
         Dönem
       </span>
 
-      {/* Tarih giriş ikilisi */}
-      <div
-        className="flex items-center gap-1.5 rounded-xl px-3 py-1.5"
-        style={{
-          background: "rgba(255,255,255,0.04)",
-          border: "1px solid rgba(255,255,255,0.09)",
-        }}
-      >
-        <input
-          type="date"
-          value={localSd}
-          max={localEd}
-          onChange={(e) => setLocalSd(e.target.value)}
-          className="input-glass border-none bg-transparent px-0 py-0 text-sm outline-none focus:shadow-none"
-          style={{ boxShadow: "none", borderRadius: 0 }}
-        />
-        <span style={{ color: "var(--tx-muted)" }} className="text-xs select-none">
-          –
-        </span>
-        <input
-          type="date"
-          value={localEd}
-          min={localSd}
-          onChange={(e) => setLocalEd(e.target.value)}
-          className="input-glass border-none bg-transparent px-0 py-0 text-sm outline-none focus:shadow-none"
-          style={{ boxShadow: "none", borderRadius: 0 }}
-        />
-      </div>
+      <RangeCalendar sd={sd} ed={ed} today={today} onApply={apply} />
 
-      <button
-        onClick={() => apply(localSd, localEd)}
-        className="rounded-lg px-3 py-1.5 text-xs font-semibold tracking-wide transition-all duration-150"
-        style={{
-          background: "linear-gradient(135deg, rgba(56,189,248,0.85), rgba(6,214,160,0.8))",
-          color: "#06091a",
-          boxShadow: "0 2px 8px rgba(56,189,248,0.2)",
-        }}
-      >
-        Uygula
-      </button>
+      {/* Ayraç */}
+      <div className="mx-0.5 h-4 w-px" style={{ background: "var(--glass-border)" }} />
 
-      <div
-        className="mx-1 h-4 w-px"
-        style={{ background: "rgba(255,255,255,0.08)" }}
-      />
-
-      {/* Segmented preset butonları */}
+      {/* Segmented preset butonlar */}
       <div
         className="flex items-center gap-0.5 rounded-xl p-0.5"
         style={{
-          background: "rgba(255,255,255,0.04)",
-          border: "1px solid rgba(255,255,255,0.07)",
+          background: "var(--glass-bg)",
+          border: "1px solid var(--glass-border)",
         }}
       >
         {ps.map((p) => {
@@ -127,20 +96,17 @@ export default function DateRangeBar({
           return (
             <button
               key={p.label}
-              onClick={() => {
-                setLocalSd(p.sd);
-                setLocalEd(p.ed);
-                apply(p.sd, p.ed);
-              }}
-              className="rounded-lg px-2.5 py-1 text-xs transition-all duration-150"
+              type="button"
+              onClick={() => apply(p.sd, p.ed)}
+              className="rounded-[9px] px-2.5 py-1 text-xs font-medium transition-all duration-150"
               style={
                 active
                   ? {
                       background:
-                        "linear-gradient(135deg, rgba(56,189,248,0.2), rgba(6,214,160,0.15))",
-                      border: "1px solid rgba(56,189,248,0.3)",
-                      color: "#e0f6ff",
-                      fontWeight: 500,
+                        "linear-gradient(135deg, rgba(56,189,248,0.22), rgba(6,214,160,0.16))",
+                      border: "1px solid rgba(56,189,248,0.28)",
+                      color: "#dff3ff",
+                      boxShadow: "0 1px 0 rgba(255,255,255,0.08) inset",
                     }
                   : {
                       background: "transparent",
@@ -155,15 +121,23 @@ export default function DateRangeBar({
         })}
       </div>
 
-      <div
-        className="ml-auto text-xs"
-        style={{ color: "var(--tx-muted)" }}
-      >
-        {dayCount} gün ·{" "}
-        <span style={{ color: "var(--tx-secondary)" }}>
-          {workdayCount} iş günü
-        </span>{" "}
-        (herkes için aynı)
+      {/* Dönem özeti */}
+      <div className="ml-auto text-xs" style={{ color: "var(--tx-muted)" }}>
+        {pending ? (
+          <span className="flex items-center gap-1.5" style={{ color: "var(--ac-sky)" }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden className="animate-spin">
+              <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+            </svg>
+            Yükleniyor…
+          </span>
+        ) : (
+          <span className="tabular-nums">
+            <span style={{ color: "var(--tx-secondary)" }}>{dayCount}</span>
+            {" gün · "}
+            <span style={{ color: "var(--tx-secondary)" }}>{workdayCount}</span>
+            {" iş günü"}
+          </span>
+        )}
       </div>
     </div>
   );

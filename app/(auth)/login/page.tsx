@@ -37,73 +37,82 @@ export default function LoginPage() {
       className="relative flex min-h-screen items-center justify-center overflow-hidden px-4"
       style={{ background: "var(--bg-base)" }}
     >
-      {/* Dekoratif ışık blob'ları */}
+      {/* Dekoratif blob ışıkları */}
       <div
         aria-hidden
         className="pointer-events-none fixed inset-0"
         style={{
           backgroundImage: [
-            "radial-gradient(ellipse 800px 600px at 20% 30%, rgba(56,189,248,0.1), transparent)",
-            "radial-gradient(ellipse 600px 500px at 80% 70%, rgba(6,214,160,0.08), transparent)",
-            "radial-gradient(ellipse 500px 600px at 55% 100%, rgba(167,139,250,0.07), transparent)",
+            "radial-gradient(ellipse 900px 700px at 15% 25%, rgba(56,189,248,0.12), transparent)",
+            "radial-gradient(ellipse 700px 600px at 85% 75%, rgba(6,214,160,0.09), transparent)",
+            "radial-gradient(ellipse 600px 700px at 55% 105%, rgba(167,139,250,0.08), transparent)",
           ].join(", "),
         }}
       />
 
+      {/* Izgara arka plan deseni — ince netlik hissi */}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-0 opacity-[0.025]"
+        style={{
+          backgroundImage:
+            "linear-gradient(rgba(255,255,255,0.8) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.8) 1px, transparent 1px)",
+          backgroundSize: "64px 64px",
+        }}
+      />
+
       {/* Giriş kartı */}
-      <div className="glass-modal relative w-full max-w-sm anim-scale-in p-8">
+      <div className="glass-modal relative w-full max-w-sm anim-scale-in px-8 py-9">
         {/* Üst parıltı çizgisi */}
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 h-px rounded-t-[18px]"
+          className="pointer-events-none absolute inset-x-0 top-0 h-px rounded-t-[20px]"
           style={{
             background:
-              "linear-gradient(90deg, transparent, rgba(56,189,248,0.5) 40%, rgba(6,214,160,0.4) 60%, transparent)",
+              "linear-gradient(90deg, transparent 5%, rgba(56,189,248,0.55) 40%, rgba(6,214,160,0.45) 60%, transparent 95%)",
           }}
         />
 
-        {/* Logo / başlık */}
-        <div className="mb-8 text-center">
+        {/* Logo + başlık */}
+        <div className="mb-9 flex flex-col items-center gap-4">
           <div
-            className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl"
+            className="flex h-14 w-14 items-center justify-center rounded-2xl"
             style={{
               background:
-                "linear-gradient(135deg, rgba(56,189,248,0.2), rgba(6,214,160,0.15))",
-              border: "1px solid rgba(56,189,248,0.3)",
-              boxShadow: "0 4px 16px rgba(56,189,248,0.15)",
+                "linear-gradient(135deg, rgba(56,189,248,0.22), rgba(6,214,160,0.18))",
+              border: "1px solid rgba(56,189,248,0.35)",
+              boxShadow:
+                "0 0 0 6px rgba(56,189,248,0.06), 0 8px 24px rgba(56,189,248,0.20)",
             }}
           >
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              aria-hidden
-            >
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-label="PDKS Pro logo">
               <path
                 d="M12 2L3 7v10l9 5 9-5V7L12 2z"
                 stroke="#38bdf8"
-                strokeWidth="1.5"
+                strokeWidth="1.6"
                 strokeLinejoin="round"
               />
               <path
                 d="M12 7v10M7 9.5l5 2.5 5-2.5"
                 stroke="#06d6a0"
-                strokeWidth="1.5"
+                strokeWidth="1.4"
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
             </svg>
           </div>
-          <h1
-            className="text-xl font-semibold tracking-tight"
-            style={{ color: "var(--tx-primary)" }}
-          >
-            PDKS Pro
-          </h1>
-          <p className="mt-1 text-sm" style={{ color: "var(--tx-secondary)" }}>
-            Natural Clinic
-          </p>
+
+          <div className="text-center">
+            <h1
+              className="text-2xl font-semibold tracking-tight"
+              style={{ color: "var(--tx-primary)" }}
+            >
+              PDKS Pro
+            </h1>
+            <p className="mt-1 text-sm" style={{ color: "var(--tx-secondary)" }}>
+              Natural Clinic — Personel Devam Sistemi
+            </p>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -143,10 +152,10 @@ export default function LoginPage() {
 
           {error && (
             <div
-              className="rounded-lg px-3 py-2 text-sm"
+              className="rounded-xl px-3.5 py-2.5 text-sm"
               style={{
                 background: "var(--cl-danger-dim)",
-                border: "1px solid rgba(248,113,113,0.25)",
+                border: "1px solid rgba(248,113,113,0.28)",
                 color: "var(--cl-danger)",
               }}
             >
@@ -157,27 +166,48 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="mt-2 w-full rounded-xl py-2.5 text-sm font-semibold tracking-wide transition-all duration-150 disabled:opacity-50"
+            className="relative mt-2 w-full overflow-hidden rounded-xl py-3 text-sm font-semibold tracking-wide transition-all duration-200 disabled:opacity-60"
             style={{
-              background:
-                "linear-gradient(135deg, #38bdf8, #06d6a0)",
-              color: "#06091a",
+              background: loading
+                ? "rgba(56,189,248,0.6)"
+                : "linear-gradient(135deg, #38bdf8 0%, #06d6a0 100%)",
+              color: "#05091a",
               boxShadow: loading
                 ? "none"
-                : "0 4px 20px rgba(56,189,248,0.3), 0 1px 0 rgba(255,255,255,0.15) inset",
+                : "0 6px 24px rgba(56,189,248,0.35), 0 1px 0 rgba(255,255,255,0.18) inset",
             }}
           >
-            {loading ? "Giriş yapılıyor…" : "Giriş Yap"}
+            {/* Parlama efekti */}
+            {!loading && (
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-0 rounded-xl"
+                style={{
+                  background:
+                    "linear-gradient(105deg, rgba(255,255,255,0.22) 0%, transparent 50%)",
+                }}
+              />
+            )}
+            {loading ? (
+              <span className="inline-flex items-center gap-2">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden className="animate-spin">
+                  <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                </svg>
+                Giriş yapılıyor…
+              </span>
+            ) : (
+              "Giriş Yap"
+            )}
           </button>
         </form>
 
         {/* Alt ince çizgi */}
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-px rounded-b-[18px]"
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-px rounded-b-[20px]"
           style={{
             background:
-              "linear-gradient(90deg, transparent, rgba(255,255,255,0.06) 50%, transparent)",
+              "linear-gradient(90deg, transparent, rgba(255,255,255,0.07) 50%, transparent)",
           }}
         />
       </div>

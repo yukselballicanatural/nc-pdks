@@ -5,6 +5,7 @@
 import "server-only";
 import { supabaseServer } from "../supabaseServer";
 import { wallClockToUtcIso } from "../../engine/tz";
+import { SALES_POZISYON } from "../../engine/scope";
 
 const COLS =
   "source_id, sicil_no, ad, soyad, firma, alt_firma, pozisyon, bolum, event_time, giris_kapisi, kapi_no";
@@ -19,14 +20,22 @@ export interface RawRow {
   soyad: string | null;
   firma: string | null;
   alt_firma: string | null;
-  pozisyon: string | null; // = takım lideri adı
+  pozisyon: string | null; // bağlı direktörlük (kapsam filtresi — bkz. engine/scope.ts)
   bolum: string | null;
   event_time: string; // gerçek UTC
   giris_kapisi: string;
   kapi_no: number | null;
 }
 
-/** Duvar saati [startWall, endWall) aralığındaki tüm ham satırlar (sayfalı, paralel). */
+/**
+ * Duvar saati [startWall, endWall) aralığındaki TÜM ham satırlar (sayfalı, paralel).
+ *
+ * Kapsam filtresi burada UYGULANMAZ — bilinçli. "Kart basma şüphesi" ve buddy
+ * punch tespitleri kişiler ARASI çalışır (aynı turnikeden 15/60 sn içinde birlikte
+ * geçiş). Ham veriyi satışa daraltsak, bir satış danışmanının satış dışı bir
+ * çalışanla birlikte geçmesi görünmez olurdu. Kapsam, sonuç yazılırken uygulanır
+ * (bkz. lib/sync/runSync.ts → inScope).
+ */
 export async function fetchRawRows(startWall: Date, endWall: Date): Promise<RawRow[]> {
   const sb = supabaseServer();
   const gte = wallClockToUtcIso(startWall);
@@ -77,6 +86,7 @@ export async function fetchRawRowsForPerson(
   const { data, error } = await sb
     .from("turnike_gecisler")
     .select(COLS)
+    .eq("pozisyon", SALES_POZISYON)
     .eq("sicil_no", sicil)
     .gte("event_time", wallClockToUtcIso(startWall))
     .lt("event_time", wallClockToUtcIso(endWall))
@@ -102,6 +112,7 @@ export async function fetchRecentRawRows(
   const { count, error: cErr } = await sb
     .from("turnike_gecisler")
     .select("source_id", { count: "exact", head: true })
+    .eq("pozisyon", SALES_POZISYON)
     .gte("event_time", gte)
     .lt("event_time", lt);
   if (cErr) throw new Error(`turnike_gecisler sayılamadı: ${cErr.message}`);
@@ -113,6 +124,7 @@ export async function fetchRecentRawRows(
       sb
         .from("turnike_gecisler")
         .select(COLS)
+        .eq("pozisyon", SALES_POZISYON)
         .gte("event_time", gte)
         .lt("event_time", lt)
         .order("event_time", { ascending: false })

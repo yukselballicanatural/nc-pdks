@@ -31,41 +31,57 @@ export default function PageHeader({
   const counts = range ? rangeDayCounts(range) : null;
 
   return (
-    <div
-      style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}
-    >
+    <div style={{ borderBottom: "1px solid rgba(255,255,255,0.075)" }}>
+      {/* Başlık şeridi */}
       <div
-        className="flex flex-wrap items-center gap-3 px-6 py-4"
+        className="relative flex flex-wrap items-center gap-3 px-7 py-5 overflow-hidden"
         style={{
-          background: "rgba(6,12,24,0.5)",
-          backdropFilter: "blur(8px)",
-          WebkitBackdropFilter: "blur(8px)",
+          background:
+            "linear-gradient(180deg, rgba(8,17,40,0.60) 0%, rgba(5,9,26,0.40) 100%)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
         }}
       >
-        <div className="min-w-0">
+        {/* Soldan yumuşak sky tonu */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -left-8 top-0 h-full w-40 opacity-40"
+          style={{
+            background:
+              "radial-gradient(ellipse 160px 80px at 0% 50%, rgba(56,189,248,0.18), transparent)",
+          }}
+        />
+
+        <div className="relative min-w-0 flex-1">
           <h1
-            className="text-lg font-semibold tracking-tight"
+            className="text-2xl font-semibold tracking-tight leading-tight"
             style={{ color: "var(--tx-primary)" }}
           >
             {title}
           </h1>
           {description && (
-            <p className="mt-0.5 text-sm" style={{ color: "var(--tx-secondary)" }}>
+            <p
+              className="mt-1 text-sm leading-relaxed"
+              style={{ color: "var(--tx-secondary)" }}
+            >
               {description}
             </p>
           )}
         </div>
+
         {actions && (
-          <div className="ml-auto flex items-center gap-2">{actions}</div>
+          <div className="relative ml-auto flex items-center gap-2">{actions}</div>
         )}
       </div>
+
+      {/* Tarih aralığı şeridi */}
       {showDateBar && range && counts && (
         <Suspense
           fallback={
             <div
               className="h-11"
               style={{
-                background: "rgba(6,12,24,0.6)",
+                background: "rgba(5,9,26,0.55)",
                 borderBottom: "1px solid rgba(255,255,255,0.06)",
               }}
             />

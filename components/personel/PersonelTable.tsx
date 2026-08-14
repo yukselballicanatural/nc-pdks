@@ -7,7 +7,6 @@ export interface PersonelRow {
   key: string;
   sicil: string;
   adSoyad: string;
-  takimLideri: string;
   unvan: string;
   bolum: string;
   firma: string;
@@ -24,14 +23,14 @@ export default function PersonelTable({ rows }: { rows: PersonelRow[] }) {
   const [eslesme, setEslesme] = useState("");
 
   const tlList = useMemo(
-    () => [...new Set(rows.map((r) => r.takimLideri).filter(Boolean))].sort((a, b) => a.localeCompare(b, "tr")),
+    () => [...new Set(rows.map((r) => r.unvan).filter(Boolean))].sort((a, b) => a.localeCompare(b, "tr")),
     [rows]
   );
 
   const filtered = useMemo(
     () =>
       rows.filter((r) => {
-        if (tl && r.takimLideri !== tl) return false;
+        if (tl && r.unvan !== tl) return false;
         if (eslesme === "Sicil ile eşleşti" && r.zohoEslesme !== "employment_no") return false;
         if (eslesme === "İsim ile eşleşti" && r.zohoEslesme !== "name") return false;
         if (eslesme === "Eşleşmedi" && r.zohoEslesme !== null) return false;
@@ -69,14 +68,13 @@ export default function PersonelTable({ rows }: { rows: PersonelRow[] }) {
       sortValue: (r) => (r.zohoEslesme === "employment_no" ? 0 : r.zohoEslesme === "name" ? 1 : 2),
     },
     {
-      key: "tl",
-      header: "Takım Lideri",
+      key: "unvan",
+      header: "Ünvan",
       cell: (r) => (
-        <span className={r.takimLideri === "Bilinmiyor" ? "text-red-400" : "text-slate-300"}>{r.takimLideri}</span>
+        <span className={r.unvan === "Bilinmiyor" ? "text-red-400" : "text-slate-300"}>{r.unvan}</span>
       ),
-      sortValue: (r) => r.takimLideri,
+      sortValue: (r) => r.unvan,
     },
-    { key: "unvan", header: "Ünvan", cell: (r) => <span className="text-slate-400">{r.unvan || "-"}</span>, sortValue: (r) => r.unvan },
     { key: "bolum", header: "Bölüm", cell: (r) => <span className="text-slate-400">{r.bolum || "-"}</span>, sortValue: (r) => r.bolum },
     { key: "firma", header: "Firma", cell: (r) => <span className="text-slate-500">{r.firma || "-"}</span>, sortValue: (r) => r.firma },
     {
@@ -99,7 +97,7 @@ export default function PersonelTable({ rows }: { rows: PersonelRow[] }) {
     <>
       <div className="mb-4 rounded-lg border border-slate-800 bg-slate-900/40 p-3 text-xs text-slate-400">
         Personel listesi <span className="text-slate-300">turnike_gecisler</span> tablosundan canlı
-        türetilir; takım lideri bilgisi her geçiş kaydındaki <span className="text-slate-300">pozisyon</span>{" "}
+        türetilir; ünvan bilgisi her geçiş kaydındaki <span className="text-slate-300">alt_firma</span>{" "}
         alanından gelir. Zoho eşleşmesi önce sicil (Employment No), bulunamazsa gerçek isim
         (Original Agent Name) üzerinden yapılır.
       </div>
@@ -107,10 +105,10 @@ export default function PersonelTable({ rows }: { rows: PersonelRow[] }) {
         rows={filtered}
         columns={columns}
         rowKey={(r) => r.key}
-        searchText={(r) => `${r.sicil} ${r.adSoyad} ${r.zohoTakmaAd ?? ""} ${r.takimLideri} ${r.unvan} ${r.bolum}`}
+        searchText={(r) => `${r.sicil} ${r.adSoyad} ${r.zohoTakmaAd ?? ""} ${r.unvan} ${r.bolum}`}
         searchPlaceholder="Ad, sicil, ünvan veya bölüm ara..."
         filters={[
-          { label: "Tüm Takım Liderleri", options: tlList, value: tl, onChange: setTl },
+          { label: "Tüm Ünvanlar", options: tlList, value: tl, onChange: setTl },
           {
             label: "Tüm Eşleşmeler",
             options: ["Sicil ile eşleşti", "İsim ile eşleşti", "Eşleşmedi"],

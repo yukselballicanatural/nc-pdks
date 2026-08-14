@@ -17,6 +17,7 @@ import { utcIsoToWallClock, wallClockToUtcIso, parseDateParam, toDateParam } fro
 import type { PdksRawEvent } from "../engine/types";
 import { loadReaderConfig } from "../db/queries/readerRules";
 import { fetchRawRows, type RawRow } from "../db/queries/rawEvents";
+import { SALES_POZISYON, SCOPE_VERSION } from "../engine/scope";
 
 /** Tek çağrıda işlenecek gün sayısı — serverless zaman limitine sığması için. */
 const CHUNK_DAYS = 7;
@@ -70,7 +71,7 @@ async function loadGeceTl(): Promise<string[]> {
 /** Kapı sınıflandırması + gece TL listesinin imzası; değişirse tam yeniden hesaplama gerekir. */
 function configVersionOf(rc: ReaderConfig, geceTl: string[]): string {
   const j = rc.toJSON();
-  return JSON.stringify({ w: j.work_readers, b: j.break_readers, i: j.ignore_readers, g: geceTl });
+  return JSON.stringify({ w: j.work_readers, b: j.break_readers, i: j.ignore_readers, g: geceTl, s: SCOPE_VERSION });
 }
 
 async function maxSourceId(): Promise<number> {
@@ -180,12 +181,22 @@ async function processWindow(
   const rawRows = await fetchRawRows(addDays(startDay, -1), addDays(endDayExclusive, 2));
   const events = rowsToEvents(rawRows);
 
+  // KAPSAM: hesaplama tüm kayıtlarla yapılır (kart basma / buddy punch kişiler
+  // arası çalışıyor — satış dışı bir çalışanla birlikte geçiş de yakalanmalı),
+  // ama SONUÇ yalnızca satış personeli için yazılır.
+  const salesSicils = new Set<string>();
+  for (const r of rawRows) {
+    if ((r.pozisyon ?? "").trim() === SALES_POZISYON) salesSicils.add(r.sicil_no);
+  }
+  const inScope = (sicil: string) => salesSicils.has(sicil);
+
   // Kişi bilgisi (en son görülen kayıt kazanır — rows kronolojik sıralı).
   const person = new Map<
     string,
     { ad: string; soyad: string; tl: string; bolum: string; firma: string; unvan: string; last: string }
   >();
   for (const r of rawRows) {
+    if (!inScope(r.sicil_no)) continue;
     person.set(r.sicil_no, {
       ad: (r.ad ?? "").trim(),
       soyad: (r.soyad ?? "").trim(),
@@ -220,6 +231,7 @@ async function processWindow(
   const turnikeCount = new Map<string, number>();
   for (const e of events) {
     if (readerConfig.getArea(e.ok) !== "work") continue;
+    if (!inScope(e.sicil)) continue;
     const mg = mesaiGunu(e.dt, isGece(e.sicil));
     if (!inWindow(mg)) continue;
     const k = shiftKey(e.sicil, formatGs(mg));
@@ -230,6 +242,7 @@ async function processWindow(
   for (const [key, sh] of shifts) {
     if (!inWindow(sh.mg)) continue;
     const sicil = key.split("::")[0];
+    if (!inScope(sicil)) continue;
     shiftRows.push({
       sicil,
       mesai_gunu: toDateParam(sh.mg),
@@ -249,7 +262,7 @@ async function processWindow(
   }
 
   const alarmRows = alarms
-    .filter((a) => inWindow(a.mg))
+    .filter((a) => inWindow(a.mg) && inScope(a.sicil))
     .map((a) => ({
       tip: a.tip,
       sicil: a.sicil,
@@ -263,7 +276,7 @@ async function processWindow(
     .map((i) => events[i])
     .filter((e): e is PdksRawEvent => Boolean(e))
     .map((e) => ({ e, mg: mesaiGunu(e.dt, isGece(e.sicil)) }))
-    .filter(({ mg }) => inWindow(mg))
+    .filter(({ mg, e }) => inWindow(mg) && inScope(e.sicil))
     .map(({ e, mg }) => ({
       sicil: e.sicil,
       mesai_gunu: toDateParam(mg),
@@ -324,6 +337,20 @@ async function processWindow(
   return { rows: rawRows.length, shifts: shiftRows.length, alarms: alarmRows.length };
 }
 
+/**
+ * Kapsam daraldığında (veya bir kişinin bağlı direktörlüğü değiştiğinde) personel
+ * önbelleğinde kalan satış dışı kayıtları siler. Gün bazlı tablolar zaten pencere
+ * silme ile temizleniyor; bu tablo sicil bazlı olduğu için ayrı temizlik gerekir.
+ */
+async function purgeOutOfScopePersonnel(): Promise<void> {
+  const sb = supabaseServer();
+  const { error } = await sb
+    .from("pdks_personnel_cache")
+    .delete()
+    .neq("takim_lideri", SALES_POZISYON);
+  if (error) throw new Error(`personel önbelleği temizlenemedi: ${error.message}`);
+}
+
 export async function runSync(opts: { force?: boolean } = {}): Promise<SyncResult> {
   const [state, readerConfig, geceTl] = await Promise.all([
     loadState(),
@@ -362,6 +389,7 @@ export async function runSync(opts: { force?: boolean } = {}): Promise<SyncResul
     const finished = end > bounds.max;
 
     if (finished) {
+      await purgeOutOfScopePersonnel();
       const maxId = await maxSourceId();
       await saveState({
         last_source_id: maxId,
