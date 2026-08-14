@@ -125,10 +125,31 @@ function IconFingerprint() {
   );
 }
 
+function IconLeave() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="3" y="4.5" width="18" height="17" rx="2.5"/>
+      <path d="M16 2.5v4M8 2.5v4M3 10h18"/>
+      <path d="M9.5 15.5l1.8 1.8 3.4-3.6"/>
+    </svg>
+  );
+}
+
+function IconTeams() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <circle cx="9" cy="8" r="3.2"/>
+      <path d="M2.5 20v-1.4A4.1 4.1 0 0 1 6.6 14.5h4.8a4.1 4.1 0 0 1 4.1 4.1V20"/>
+      <path d="M17 4.2a3.2 3.2 0 0 1 0 6.2M18.5 14.7A4.1 4.1 0 0 1 21.5 18.6V20"/>
+    </svg>
+  );
+}
+
 export type NavIconKey =
   | "dashboard" | "ozet" | "gunluk-detay" | "mola-detayi"
   | "pdks-alarm" | "buddy-punch" | "log" | "duzeltmeler"
-  | "kapi-ayarlari" | "personel" | "zoho-kullanicilar" | "senkronizasyon";
+  | "kapi-ayarlari" | "personel" | "zoho-kullanicilar" | "senkronizasyon"
+  | "takimlar" | "izinler";
 
 function NavIcon({ name }: { name: NavIconKey }) {
   switch (name) {
@@ -144,6 +165,8 @@ function NavIcon({ name }: { name: NavIconKey }) {
     case "personel":         return <IconPerson />;
     case "zoho-kullanicilar":return <IconGlobe />;
     case "senkronizasyon":   return <IconSync />;
+    case "takimlar":         return <IconTeams />;
+    case "izinler":          return <IconLeave />;
     default:                 return null;
   }
 }
@@ -164,6 +187,8 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/buddy-punch",      label: "Buddy Punch",      icon: "buddy-punch" },
   { href: "/log",              label: "Geçiş Kayıtları",  icon: "log" },
   { href: "/duzeltmeler",      label: "Düzeltmeler",      icon: "duzeltmeler" },
+  { href: "/takimlar",         label: "Takımlar",         icon: "takimlar" },
+  { href: "/izinler",          label: "İzinler",          icon: "izinler" },
   { href: "/kapi-ayarlari",    label: "Kapı Ayarları",    icon: "kapi-ayarlari",     adminOnly: true },
   { href: "/personel",         label: "Personel",         icon: "personel",          adminOnly: true },
   { href: "/zoho-kullanicilar",label: "Zoho Kullanıcılar",icon: "zoho-kullanicilar", adminOnly: true },
