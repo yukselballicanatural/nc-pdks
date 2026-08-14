@@ -271,6 +271,20 @@ async function processWindow(
       okuyucu: e.ok,
     }));
 
+  // Okuyucu bazlı günlük kayıt sayısı — Kapı Ayarları ekranı ham tabloyu
+  // taramak zorunda kalmasın diye (önceden ~7 sn sürüyordu).
+  const readerDaily = new Map<string, number>();
+  for (const e of events) {
+    const mg = mesaiGunu(e.dt, isGece(e.sicil));
+    if (!inWindow(mg)) continue;
+    const k = `${e.ok}::${toDateParam(mg)}`;
+    readerDaily.set(k, (readerDaily.get(k) ?? 0) + 1);
+  }
+  const readerRows = [...readerDaily.entries()].map(([k, n]) => {
+    const sep = k.lastIndexOf("::");
+    return { okuyucu: k.slice(0, sep), mesai_gunu: k.slice(sep + 2), kayit_sayisi: n };
+  });
+
   const personRows = [...person.entries()].map(([sicil, p]) => ({
     sicil,
     ad: p.ad,
@@ -287,7 +301,7 @@ async function processWindow(
   const sb = supabaseServer();
   const gunFrom = toDateParam(startDay);
   const gunToExcl = toDateParam(endDayExclusive);
-  for (const t of ["pdks_alarms", "pdks_buddy"]) {
+  for (const t of ["pdks_alarms", "pdks_buddy", "pdks_reader_daily"]) {
     const { error } = await sb.from(t).delete().gte("mesai_gunu", gunFrom).lt("mesai_gunu", gunToExcl);
     if (error) throw new Error(`${t} temizlenemedi: ${error.message}`);
   }
@@ -304,6 +318,7 @@ async function processWindow(
   await upsertInBatches("pdks_shifts", shiftRows, "sicil,mesai_gunu");
   await insertInBatches("pdks_alarms", alarmRows);
   await insertInBatches("pdks_buddy", buddyRows);
+  await insertInBatches("pdks_reader_daily", readerRows);
   await upsertInBatches("pdks_personnel_cache", personRows, "sicil");
 
   return { rows: rawRows.length, shifts: shiftRows.length, alarms: alarmRows.length };

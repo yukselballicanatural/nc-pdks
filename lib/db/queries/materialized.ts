@@ -1,44 +1,62 @@
 // Önceden hesaplanmış pdks_* tablolarından okuma. Sayfaların ana veri kaynağı.
-// Ham veriye (60k+ satır) hiç dokunmaz — dönem başına yalnızca birkaç bin küçük satır.
+// Ham veriye (60k+ satır) dokunmaz.
+//
+// Sayfalama PARALEL yapılır: önce sayım, sonra tüm sayfalar eşzamanlı. Sıralı
+// döngüde 9-10 sayfa ~1.1 sn round-trip demekti.
 import "server-only";
 import { supabaseServer } from "../supabaseServer";
 import { formatGs } from "../../engine/mesaiGunu";
 import { shiftKey } from "../../engine/calcShifts";
-import { parseDateParam, toDateParam, utcIsoToWallClock } from "../../engine/tz";
+import { parseDateParam, utcIsoToWallClock } from "../../engine/tz";
 import type { Alarm, AlarmTipVal, ShiftResult } from "../../engine/types";
 import { G_NET, N_NET } from "../../engine/constants";
 
 const PAGE = 1000;
+const CONCURRENCY = 10;
 
-async function selectAllPages<T>(
+type Filter = { col: string; op: "gte" | "lte" | "eq"; val: string };
+
+/** Sayım + paralel sayfa çekimi. */
+async function selectPages<T>(
   table: string,
   cols: string,
-  apply: (q: ReturnType<ReturnType<typeof supabaseServer>["from"]>) => unknown
-): Promise<T[]> {
+  filters: Filter[],
+  order: { col: string; ascending: boolean },
+  limit?: number
+): Promise<{ rows: T[]; total: number }> {
   const sb = supabaseServer();
-  const out: T[] = [];
-  for (let p = 0; ; p++) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let q: any = sb.from(table).select(cols);
-    q = apply(q) ?? q;
-    const { data, error } = await q.range(p * PAGE, p * PAGE + PAGE - 1);
-    if (error) throw new Error(`${table} okunamadı: ${error.message}`);
-    const batch = (data ?? []) as T[];
-    out.push(...batch);
-    if (batch.length < PAGE) break;
-  }
-  return out;
-}
 
-export interface PersonRow {
-  sicil: string;
-  ad: string;
-  soyad: string;
-  takim_lideri: string;
-  bolum: string;
-  firma: string;
-  unvan: string;
-  last_seen: string | null;
+  const build = (select: string, head = false) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let q: any = sb.from(table).select(select, head ? { count: "exact", head: true } : undefined);
+    for (const f of filters) q = q[f.op](f.col, f.val);
+    return q;
+  };
+
+  const { count, error: cErr } = await build(cols.split(",")[0].trim(), true);
+  if (cErr) throw new Error(`${table} sayılamadı: ${cErr.message}`);
+  const total = count ?? 0;
+
+  const wanted = limit ? Math.min(limit, total) : total;
+  const pageCount = Math.ceil(wanted / PAGE);
+  const rows: T[] = [];
+
+  for (let i = 0; i < pageCount; i += CONCURRENCY) {
+    const batch = Array.from({ length: Math.min(CONCURRENCY, pageCount - i) }, (_, k) => i + k);
+    const results = await Promise.all(
+      batch.map((p) =>
+        build(cols)
+          .order(order.col, { ascending: order.ascending })
+          .range(p * PAGE, p * PAGE + PAGE - 1)
+      )
+    );
+    for (const r of results) {
+      if (r.error) throw new Error(`${table} okunamadı: ${r.error.message}`);
+      rows.push(...((r.data ?? []) as T[]));
+    }
+  }
+
+  return { rows, total };
 }
 
 export interface PersonInfo {
@@ -51,11 +69,22 @@ export interface PersonInfo {
   unvan: string;
 }
 
+interface PersonRow {
+  sicil: string;
+  ad: string;
+  soyad: string;
+  takim_lideri: string;
+  bolum: string;
+  firma: string;
+  unvan: string;
+}
+
 export async function fetchPersonnel(): Promise<Map<string, PersonInfo>> {
-  const rows = await selectAllPages<PersonRow>(
+  const { rows } = await selectPages<PersonRow>(
     "pdks_personnel_cache",
-    "sicil, ad, soyad, takim_lideri, bolum, firma, unvan, last_seen",
-    (q) => (q as { order: (c: string, o: object) => unknown }).order("sicil", { ascending: true })
+    "sicil, ad, soyad, takim_lideri, bolum, firma, unvan",
+    [],
+    { col: "sicil", ascending: true }
   );
   const map = new Map<string, PersonInfo>();
   for (const r of rows) {
@@ -90,29 +119,20 @@ interface ShiftDbRow {
 }
 
 export interface ShiftsResult {
-  /** engine (summary/getNet/getEffectiveMola) ile uyumlu harita. */
   shifts: Map<string, ShiftResult>;
-  /** MolaTable için: turnike dışı okutulan okuyucu adları. */
   otherReadersByKey: Map<string, string[]>;
-  /** Özet/Dashboard için: dönemde turnike (çalışma alanı) kayıt sayısı. */
   turnikeCountByS: Map<string, number>;
 }
 
 export async function fetchShifts(sdParam: string, edParam: string): Promise<ShiftsResult> {
-  const rows = await selectAllPages<ShiftDbRow>(
+  const { rows } = await selectPages<ShiftDbRow>(
     "pdks_shifts",
     "sicil, mesai_gunu, gece, net_min, brut_min, mola_min, other_min, turnike_kayit, kayit_sayisi, ilk_giris, son_cikis, pairs, outside, other_readers",
-    (q) =>
-      (
-        q as {
-          gte: (c: string, v: string) => {
-            lte: (c: string, v: string) => { order: (c: string, o: object) => unknown };
-          };
-        }
-      )
-        .gte("mesai_gunu", sdParam)
-        .lte("mesai_gunu", edParam)
-        .order("mesai_gunu", { ascending: true })
+    [
+      { col: "mesai_gunu", op: "gte", val: sdParam },
+      { col: "mesai_gunu", op: "lte", val: edParam },
+    ],
+    { col: "mesai_gunu", ascending: true }
   );
 
   const shifts = new Map<string, ShiftResult>();
@@ -122,10 +142,8 @@ export async function fetchShifts(sdParam: string, edParam: string): Promise<Shi
   for (const r of rows) {
     const mg = parseDateParam(r.mesai_gunu);
     if (!mg) continue;
-    const gs = formatGs(mg);
-    const key = shiftKey(r.sicil, gs);
+    const key = shiftKey(r.sicil, formatGs(mg));
     const net = Number(r.net_min) || 0;
-    const std = r.gece ? N_NET : G_NET;
 
     shifts.set(key, {
       g: r.ilk_giris ? utcIsoToWallClock(r.ilk_giris) : mg,
@@ -134,12 +152,12 @@ export async function fetchShifts(sdParam: string, edParam: string): Promise<Shi
       cnt: r.kayit_sayisi ?? 0,
       net,
       brut: Number(r.brut_min) || 0,
-      fark: net - std,
+      fark: net - (r.gece ? N_NET : G_NET),
       mg,
       mola: Number(r.mola_min) || 0,
       pairs: (r.pairs ?? []).map(([a, b]) => [utcIsoToWallClock(a), utcIsoToWallClock(b)]),
       outsideIntervals: (r.outside ?? []).map(([a, b]) => [utcIsoToWallClock(a), utcIsoToWallClock(b)]),
-      others: [], // ham "diğer" kayıtları materyalize edilmiyor; okuyucu adları ayrı tutuluyor
+      others: [], // ham "diğer" kayıtları materyalize edilmiyor; okuyucu adları ayrı
       otherMin: Number(r.other_min) || 0,
     });
 
@@ -159,28 +177,59 @@ interface AlarmDbRow {
   detay: string;
 }
 
-export async function fetchAlarms(sdParam: string, edParam: string): Promise<Alarm[]> {
-  const rows = await selectAllPages<AlarmDbRow>(
-    "pdks_alarms",
-    "tip, sicil, mesai_gunu, ts, okuyucu, detay",
-    (q) =>
-      (
-        q as {
-          gte: (c: string, v: string) => {
-            lte: (c: string, v: string) => { order: (c: string, o: object) => unknown };
-          };
-        }
-      )
+export interface AlarmsResult {
+  alarms: Alarm[];
+  /** Dönemin tamamındaki tip bazlı sayılar (liste kısaltılsa da kartlar doğru kalır). */
+  counts: Record<AlarmTipVal, number>;
+  total: number;
+  truncated: boolean;
+}
+
+/**
+ * Alarmlar açıklama metinleri yüzünden hacimli; ekran zaten sınırlı satır gösteriyor.
+ * En yeni `limit` alarm çekilir, sayaçlar ayrı (ucuz) sayım sorgularıyla alınır.
+ */
+export async function fetchAlarms(
+  sdParam: string,
+  edParam: string,
+  limit = 1200
+): Promise<AlarmsResult> {
+  const sb = supabaseServer();
+  const range: Filter[] = [
+    { col: "mesai_gunu", op: "gte", val: sdParam },
+    { col: "mesai_gunu", op: "lte", val: edParam },
+  ];
+
+  const tipler: AlarmTipVal[] = ["TURNIKESIZ_CIKIS", "KART_BASMA", "TURNIKE_ATLAMA"];
+
+  const [{ rows, total }, ...countRes] = await Promise.all([
+    selectPages<AlarmDbRow>(
+      "pdks_alarms",
+      "tip, sicil, mesai_gunu, ts, okuyucu, detay",
+      range,
+      { col: "ts", ascending: false },
+      limit
+    ),
+    ...tipler.map((t) =>
+      sb
+        .from("pdks_alarms")
+        .select("id", { count: "exact", head: true })
         .gte("mesai_gunu", sdParam)
         .lte("mesai_gunu", edParam)
-        .order("ts", { ascending: false })
-  );
+        .eq("tip", t)
+    ),
+  ]);
 
-  const out: Alarm[] = [];
+  const counts = {} as Record<AlarmTipVal, number>;
+  tipler.forEach((t, i) => {
+    counts[t] = countRes[i].count ?? 0;
+  });
+
+  const alarms: Alarm[] = [];
   for (const r of rows) {
     const mg = parseDateParam(r.mesai_gunu);
     if (!mg) continue;
-    out.push({
+    alarms.push({
       tip: r.tip as AlarmTipVal,
       sicil: r.sicil,
       mg,
@@ -191,7 +240,8 @@ export async function fetchAlarms(sdParam: string, edParam: string): Promise<Ala
       refDt: null,
     });
   }
-  return out;
+
+  return { alarms, counts, total, truncated: total > rows.length };
 }
 
 export interface BuddyRow {
@@ -201,21 +251,25 @@ export interface BuddyRow {
   ok: string;
 }
 
-export async function fetchBuddy(sdParam: string, edParam: string): Promise<BuddyRow[]> {
-  const rows = await selectAllPages<{ sicil: string; mesai_gunu: string; ts: string; okuyucu: string }>(
+export async function fetchBuddy(
+  sdParam: string,
+  edParam: string,
+  limit = 3000
+): Promise<{ rows: BuddyRow[]; total: number }> {
+  const { rows, total } = await selectPages<{
+    sicil: string;
+    mesai_gunu: string;
+    ts: string;
+    okuyucu: string;
+  }>(
     "pdks_buddy",
     "sicil, mesai_gunu, ts, okuyucu",
-    (q) =>
-      (
-        q as {
-          gte: (c: string, v: string) => {
-            lte: (c: string, v: string) => { order: (c: string, o: object) => unknown };
-          };
-        }
-      )
-        .gte("mesai_gunu", sdParam)
-        .lte("mesai_gunu", edParam)
-        .order("ts", { ascending: false })
+    [
+      { col: "mesai_gunu", op: "gte", val: sdParam },
+      { col: "mesai_gunu", op: "lte", val: edParam },
+    ],
+    { col: "ts", ascending: false },
+    limit
   );
 
   const out: BuddyRow[] = [];
@@ -224,34 +278,39 @@ export async function fetchBuddy(sdParam: string, edParam: string): Promise<Budd
     if (!mg) continue;
     out.push({ sicil: r.sicil, mg, dt: utcIsoToWallClock(r.ts), ok: r.okuyucu });
   }
-  return out;
+  return { rows: out, total };
 }
 
-/** Kapı Ayarları sayfası: okuyucu adları + kayıt sayıları (materyalize edilmiş özet yok, ham tablodan tek seferlik). */
+/**
+ * Kapı Ayarları: okuyucu adları + kayıt sayıları. Senkronizasyon sırasında
+ * gün bazında materyalize edilir (pdks_reader_daily), böylece bu ekran ham
+ * tabloyu taramak zorunda kalmaz (önceden ~7 sn sürüyordu).
+ */
 export async function fetchReaderUsage(sdParam: string, edParam: string): Promise<Map<string, number>> {
-  const sd = parseDateParam(sdParam);
-  const ed = parseDateParam(edParam);
-  const counts = new Map<string, number>();
-  if (!sd || !ed) return counts;
+  const { rows } = await selectPages<{ okuyucu: string; kayit_sayisi: number }>(
+    "pdks_reader_daily",
+    "okuyucu, kayit_sayisi",
+    [
+      { col: "mesai_gunu", op: "gte", val: sdParam },
+      { col: "mesai_gunu", op: "lte", val: edParam },
+    ],
+    { col: "okuyucu", ascending: true }
+  );
 
-  // pdks_shifts.other_readers + turnike sayıları okuyucu bazlı sayı vermiyor;
-  // bu ekran nadiren açıldığı için ham tablodan yalnızca okuyucu kolonunu tarıyoruz.
-  const sb = supabaseServer();
-  const gte = `${toDateParam(sd)}T00:00:00.000Z`;
-  for (let p = 0; p < 60; p++) {
-    const { data, error } = await sb
-      .from("turnike_gecisler")
-      .select("giris_kapisi")
-      .gte("event_time", gte)
-      .order("event_time", { ascending: false })
-      .range(p * PAGE, p * PAGE + PAGE - 1);
-    if (error) throw new Error(`okuyucular okunamadı: ${error.message}`);
-    const batch = (data ?? []) as unknown as { giris_kapisi: string }[];
-    for (const r of batch) {
-      if (!r.giris_kapisi) continue;
-      counts.set(r.giris_kapisi, (counts.get(r.giris_kapisi) ?? 0) + 1);
-    }
-    if (batch.length < PAGE) break;
+  const counts = new Map<string, number>();
+  for (const r of rows) {
+    counts.set(r.okuyucu, (counts.get(r.okuyucu) ?? 0) + (Number(r.kayit_sayisi) || 0));
   }
   return counts;
+}
+
+/** Tüm zamanlarda görülmüş okuyucu adları (Kapı Ayarları listesi tam olsun diye). */
+export async function fetchAllReaderNames(): Promise<string[]> {
+  const { rows } = await selectPages<{ okuyucu: string }>(
+    "pdks_reader_daily",
+    "okuyucu",
+    [],
+    { col: "okuyucu", ascending: true }
+  );
+  return [...new Set(rows.map((r) => r.okuyucu))].sort((a, b) => a.localeCompare(b, "tr"));
 }

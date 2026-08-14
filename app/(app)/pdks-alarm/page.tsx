@@ -6,10 +6,6 @@ import AlarmTable, { type AlarmRow } from "@/components/alarm/AlarmTable";
 
 export const dynamic = "force-dynamic";
 
-// Alarm açıklamaları uzun metinler; binlerce satır sayfayı megabaytlara çıkarıyor.
-// En yeni N alarm gönderilir, geri kalanı için dönem daraltılır.
-const MAX_ROWS = 1200;
-
 export default async function PdksAlarmPage({
   searchParams,
 }: {
@@ -17,26 +13,12 @@ export default async function PdksAlarmPage({
 }) {
   const sp = await searchParams;
   const data = await loadPdksData(sp);
-  const { range, alarms, personByS, tlFilter } = data;
+  const { range, alarms, alarmCounts, alarmTotal, alarmTruncated, personByS, tlFilter } = data;
 
-  const inRange = alarms.filter((a) => {
-    if (a.mg < range.sd || a.mg > range.ed) return false;
-    if (tlFilter && personByS.get(a.sicil)?.takimLideri !== tlFilter) return false;
-    return true;
-  });
-
-  // Sayaçlar dönemin TAMAMI üzerinden hesaplanır; tablo kısaltılsa da doğru kalır.
-  const totalCounts = {
-    TURNIKESIZ_CIKIS: inRange.filter((a) => a.tip === "TURNIKESIZ_CIKIS").length,
-    KART_BASMA: inRange.filter((a) => a.tip === "KART_BASMA").length,
-    TURNIKE_ATLAMA: inRange.filter((a) => a.tip === "TURNIKE_ATLAMA").length,
-  };
-
-  const truncated = inRange.length > MAX_ROWS;
-
-  const rows: AlarmRow[] = inRange
-    .slice(-MAX_ROWS) // en yeni alarmlar
-    .reverse()
+  // Alarmlar en yeniden eskiye sıralı gelir ve sayı sınırlıdır (açıklama metinleri
+  // hacimli); tip bazlı sayaçlar dönemin tamamı üzerinden ayrı hesaplanır.
+  const rows: AlarmRow[] = alarms
+    .filter((a) => !tlFilter || personByS.get(a.sicil)?.takimLideri === tlFilter)
     .map((a, i) => {
       const p = personByS.get(a.sicil);
       return {
@@ -53,6 +35,13 @@ export default async function PdksAlarmPage({
       };
     });
 
+  const totalCounts = {
+    TURNIKESIZ_CIKIS: alarmCounts.TURNIKESIZ_CIKIS ?? 0,
+    KART_BASMA: alarmCounts.KART_BASMA ?? 0,
+    TURNIKE_ATLAMA: alarmCounts.TURNIKE_ATLAMA ?? 0,
+  };
+  const truncated = alarmTruncated;
+
   return (
     <>
       <PageHeader
@@ -62,9 +51,16 @@ export default async function PdksAlarmPage({
       />
       <div className="p-6">
         {truncated && (
-          <p className="mb-3 rounded border border-amber-500/40 bg-amber-500/10 p-2 text-sm text-amber-200">
-            Bu dönemde {inRange.length.toLocaleString("tr-TR")} alarm var; performans için en yeni{" "}
-            {MAX_ROWS.toLocaleString("tr-TR")} tanesi listeleniyor (kartlardaki sayılar dönemin
+          <p
+            className="mb-3 rounded-xl p-2.5 text-sm"
+            style={{
+              background: "rgba(251,191,36,0.1)",
+              border: "1px solid rgba(251,191,36,0.25)",
+              color: "#fbbf24",
+            }}
+          >
+            Bu dönemde {alarmTotal.toLocaleString("tr-TR")} alarm var; performans için en yeni{" "}
+            {rows.length.toLocaleString("tr-TR")} tanesi listeleniyor (kartlardaki sayılar dönemin
             tamamını gösterir). Tamamını incelemek için dönemi daraltın.
           </p>
         )}

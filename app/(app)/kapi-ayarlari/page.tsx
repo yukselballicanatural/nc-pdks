@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { loadPdksData } from "@/lib/data/loadPdks";
-import { fetchReaderUsage } from "@/lib/db/queries/materialized";
+import { fetchAllReaderNames, fetchReaderUsage } from "@/lib/db/queries/materialized";
 import { readerDirection } from "@/lib/engine/textNorm";
 import PageHeader from "@/components/ui/PageHeader";
 import KapiAyarlariTable, { type KapiRow } from "@/components/kapi/KapiAyarlariTable";
@@ -20,7 +20,12 @@ export default async function KapiAyarlariPage({
   const data = await loadPdksData(sp);
   const { readerConfig, range } = data;
 
-  const counts = await fetchReaderUsage(range.sdParam, range.edParam);
+  // Sayılar seçili dönemden, liste ise tüm zamanlardan gelir — dönemde hiç
+  // kullanılmayan bir okuyucu da sınıflandırılabilir olmalı.
+  const [counts, allNames] = await Promise.all([
+    fetchReaderUsage(range.sdParam, range.edParam),
+    fetchAllReaderNames(),
+  ]);
 
   const özelSet = new Set<string>([
     ...readerConfig.workReaders,
@@ -28,7 +33,7 @@ export default async function KapiAyarlariPage({
     ...readerConfig.ignoreReaders,
   ]);
 
-  const allReaders = new Set<string>([...counts.keys(), ...özelSet]);
+  const allReaders = new Set<string>([...allNames, ...counts.keys(), ...özelSet]);
 
   const rows: KapiRow[] = [...allReaders]
     .sort((a, b) => a.localeCompare(b, "tr"))

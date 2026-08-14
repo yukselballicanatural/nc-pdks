@@ -69,7 +69,12 @@ export interface PdksData {
    */
   turnikeCountByS: Map<string, number>;
   alarms: Alarm[];
+  /** Dönemin tamamındaki tip bazlı alarm sayıları (liste kısaltılmış olabilir). */
+  alarmCounts: Record<string, number>;
+  alarmTotal: number;
+  alarmTruncated: boolean;
   buddy: BuddyRow[];
+  buddyTotal: number;
   personByS: Map<string, PersonInfo>;
   readerConfig: ReaderConfig;
   corrections: CorrectionRow[];
@@ -91,8 +96,8 @@ export const loadPdksData = cache(async function loadPdksData(
 
   const [
     { shifts, otherReadersByKey, turnikeCountByS },
-    alarms,
-    buddy,
+    alarmRes,
+    buddyRes,
     personByS,
     readerConfig,
     { rows: corrections, lookup: corLookup },
@@ -128,8 +133,12 @@ export const loadPdksData = cache(async function loadPdksData(
     shifts,
     otherReadersByKey,
     turnikeCountByS,
-    alarms,
-    buddy,
+    alarms: alarmRes.alarms,
+    alarmCounts: alarmRes.counts,
+    alarmTotal: alarmRes.total,
+    alarmTruncated: alarmRes.truncated,
+    buddy: buddyRes.rows,
+    buddyTotal: buddyRes.total,
     personByS,
     readerConfig,
     corrections,

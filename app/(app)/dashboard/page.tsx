@@ -24,7 +24,8 @@ export default async function DashboardPage({
 }) {
   const sp = await searchParams;
   const data = await loadPdksData(sp);
-  const { range, shifts, corLookup, startEndLookup, isGece, alarms, buddy, turnikeCountByS } = data;
+  const { range, shifts, corLookup, startEndLookup, isGece, alarmCounts, buddyTotal, turnikeCountByS } =
+    data;
   const allPeople = visiblePeople(data);
 
   // Turnike kaydı olmayanlar (teknik/depo/klinik personeli) turnike bazlı hesaba
@@ -90,10 +91,6 @@ export default async function DashboardPage({
     .slice(0, 12)
     .reverse();
 
-  const alarmsInRange = alarms.filter(
-    (a) => a.mg >= range.sd && a.mg <= range.ed && (!data.tlFilter || data.personByS.get(a.sicil)?.takimLideri === data.tlFilter)
-  );
-
   let isGunu = 0;
   for (let d = range.sd; d <= range.ed; d = addDays(d, 1)) if (isWeekday(d)) isGunu++;
 
@@ -131,19 +128,19 @@ export default async function DashboardPage({
         <div className="grid gap-3 sm:grid-cols-3">
           <StatCard
             label="Turnikesiz Çıkış"
-            value={alarmsInRange.filter((a) => a.tip === "TURNIKESIZ_CIKIS").length}
+            value={(alarmCounts.TURNIKESIZ_CIKIS ?? 0).toLocaleString("tr-TR")}
             icon="🚨"
             tone="red"
           />
           <StatCard
             label="Kart Basma Şüphesi"
-            value={alarmsInRange.filter((a) => a.tip === "KART_BASMA").length}
+            value={(alarmCounts.KART_BASMA ?? 0).toLocaleString("tr-TR")}
             icon="👥"
             tone="amber"
           />
           <StatCard
             label="Turnike Atlama"
-            value={alarmsInRange.filter((a) => a.tip === "TURNIKE_ATLAMA").length}
+            value={(alarmCounts.TURNIKE_ATLAMA ?? 0).toLocaleString("tr-TR")}
             icon="⚠️"
             tone="violet"
           />
@@ -157,7 +154,7 @@ export default async function DashboardPage({
         </div>
 
         <p className="text-xs" style={{ color: "var(--tx-muted)" }}>
-          Buddy punch şüpheli kayıt: {buddy.length.toLocaleString("tr-TR")} · Vardiya bilgisi henüz
+          Buddy punch şüpheli kayıt: {buddyTotal.toLocaleString("tr-TR")} · Vardiya bilgisi henüz
           sisteme girilmediği için tüm personel gündüz vardiyası (450 dk) kabul edilmektedir.
         </p>
       </div>
