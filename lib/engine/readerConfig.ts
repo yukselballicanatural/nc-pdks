@@ -8,6 +8,8 @@ export class ReaderConfig {
   workReaders: Set<string>;
   breakReaders: Set<string>;
   ignoreReaders: Set<string>;
+  /** getArea on binlerce olay için çağrılıyor; sınıflandırma değişene kadar önbelleklenir. */
+  private areaCache = new Map<string, ReaderArea>();
 
   constructor(init?: { work_readers?: string[]; break_readers?: string[]; ignore_readers?: string[] }) {
     this.workReaders = new Set(init?.work_readers ?? []);
@@ -24,14 +26,23 @@ export class ReaderConfig {
     if (area === "work") this.workReaders.add(name);
     else if (area === "break") this.breakReaders.add(name);
     else if (area === "ignore") this.ignoreReaders.add(name);
+    this.areaCache.clear();
   }
 
   getArea(okuyucu: string): ReaderArea {
-    const name = String(okuyucu ?? "").trim();
-    if (this.ignoreReaders.has(name)) return "ignore";
-    if (this.workReaders.has(name)) return "work";
-    if (this.breakReaders.has(name)) return "break";
-    return readerIsTurnike(name) ? "work" : "break";
+    const raw = String(okuyucu ?? "");
+    const hit = this.areaCache.get(raw);
+    if (hit !== undefined) return hit;
+
+    const name = raw.trim();
+    let val: ReaderArea;
+    if (this.ignoreReaders.has(name)) val = "ignore";
+    else if (this.workReaders.has(name)) val = "work";
+    else if (this.breakReaders.has(name)) val = "break";
+    else val = readerIsTurnike(name) ? "work" : "break";
+
+    this.areaCache.set(raw, val);
+    return val;
   }
 
   isWork(okuyucu: string): boolean {

@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { pairGirisCikis } from "./pairGirisCikis";
 
+// Duvar saati sözleşmesi: Date.UTC ile kuruluyor (bkz. lib/engine/tz.ts).
 function d(hms: string): Date {
   const [h, m, s] = hms.split(":").map(Number);
-  return new Date(2026, 0, 1, h, m, s ?? 0);
+  return new Date(Date.UTC(2026, 0, 1, h, m, s ?? 0));
 }
 
 describe("pairGirisCikis (ARCHITECTURE.md §3 kuralı)", () => {

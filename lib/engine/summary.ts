@@ -2,7 +2,7 @@
 // (get_net, get_effective_mola, get_effective_start/end, summary, get_missing_days).
 // Birebir port.
 import { G_MOLA, G_NET, N_MOLA, N_NET } from "./constants";
-import { addDays, dateOnly, formatGs } from "./mesaiGunu";
+import { addDays, dateOnly, formatGs, isWeekday } from "./mesaiGunu";
 import type { ShiftResult, SummaryResult } from "./types";
 import { shiftKey } from "./calcShifts";
 
@@ -20,11 +20,6 @@ export interface CorrectionLookup {
 export interface StartEndLookup {
   getStartDate(sicil: string): Date | null;
   getEndDate(sicil: string): Date | null;
-}
-
-function isWeekday(d: Date): boolean {
-  const day = d.getDay(); // 0=Pazar, 6=Cumartesi
-  return day !== 0 && day !== 6;
 }
 
 export function getNet(

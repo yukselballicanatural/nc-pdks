@@ -1,77 +1,125 @@
-// turnike_gecisler (canlı Supabase tablosu, harici/senkronize) -> PdksRawEvent[].
+// turnike_gecisler (canlı Supabase tablosu) -> PdksRawEvent[].
 // Excel yükleme akışına gerek yok — bkz. supabase/migrations/0001_init.sql notu.
 import "server-only";
 import { supabaseServer } from "../supabaseServer";
 import type { PdksRawEvent } from "../../engine/types";
+import { utcIsoToWallClock, wallClockToUtcIso } from "../../engine/tz";
+
+const COLS =
+  "sicil_no, ad, soyad, firma, alt_firma, pozisyon, bolum, event_time, giris_kapisi, kapi_no";
+
+const PAGE = 1000; // PostgREST üst sınırı
+const CONCURRENCY = 12; // paralel sayfa isteği (seri çekim 60k kayıtta ~15sn sürüyor)
 
 interface TurnikeGecisRow {
-  source_id: number;
   sicil_no: string;
-  ad: string;
-  soyad: string;
+  ad: string | null;
+  soyad: string | null;
   firma: string | null;
   alt_firma: string | null;
   pozisyon: string | null; // = takım lideri adı (kullanıcı teyidi)
   bolum: string | null;
-  event_time: string; // ISO
+  event_time: string; // gerçek UTC
   giris_kapisi: string; // = okuyucu adı
   kapi_no: number | null;
-  elendi: boolean; // bilgi amaçlı; work/break ayrımını biz kendimiz de hesaplıyoruz
 }
 
 export interface PersonInfo {
   sicil: string;
   ad: string;
   soyad: string;
-  takimLideri: string; // en son (event_time'a göre) görülen pozisyon değeri
+  takimLideri: string; // en son görülen `pozisyon` değeri
   bolum: string;
   firma: string;
+  unvan: string; // alt_firma
 }
 
 export interface PdksEventsResult {
   events: PdksRawEvent[];
-  /** sicil -> en son bilinen kişi bilgisi (TL dahil) — is_gece ve UI listeleme için. */
   personByS: Map<string, PersonInfo>;
 }
 
-/**
- * Belirli tarih aralığındaki turnike geçişlerini okur. `startIso`/`endIso` dahil
- * (inclusive) sınırlardır, event_time bu aralıkta olan satırlar getirilir.
- */
-export async function fetchPdksEvents(startIso: string, endIso: string): Promise<PdksEventsResult> {
+// Süreç-içi (in-memory) önbellek. Next'in veri önbelleği (unstable_cache / use cache)
+// girdi başına ~2 MB sınırlı; 2 haftalık veri ~60k satır / ~15 MB olduğu için oraya
+// hiç yazılamıyor ve her istek yeniden çekiyordu (~2.3 sn). Kaynak tablo toplu
+// senkronizasyonla (aktarim_zamani) güncellendiği için saniyelik tazelik gerekmiyor.
+// Sunucu örneği sıcak kaldığı sürece sayfa geçişleri anında olur.
+const CACHE_TTL_MS = 5 * 60 * 1000;
+const CACHE_MAX_ENTRIES = 4;
+const rowCache = new Map<string, { at: number; rows: TurnikeGecisRow[] }>();
+
+async function fetchEventRowsCached(gte: string, lt: string): Promise<TurnikeGecisRow[]> {
+  const key = `${gte}..${lt}`;
+  const hit = rowCache.get(key);
+  if (hit && Date.now() - hit.at < CACHE_TTL_MS) return hit.rows;
+
+  const rows = await fetchEventRows(gte, lt);
+
+  rowCache.set(key, { at: Date.now(), rows });
+  // En eski girdileri at (bellek şişmesin).
+  while (rowCache.size > CACHE_MAX_ENTRIES) {
+    const oldest = [...rowCache.entries()].sort((a, b) => a[1].at - b[1].at)[0];
+    if (!oldest) break;
+    rowCache.delete(oldest[0]);
+  }
+  return rows;
+}
+
+async function fetchEventRows(gte: string, lt: string): Promise<TurnikeGecisRow[]> {
   const sb = supabaseServer();
-  const pageSize = 1000;
-  let from = 0;
+  const base = () =>
+    sb.from("turnike_gecisler").select(COLS).gte("event_time", gte).lt("event_time", lt);
+
+  const { count, error: cErr } = await sb
+    .from("turnike_gecisler")
+    .select("sicil_no", { count: "exact", head: true })
+    .gte("event_time", gte)
+    .lt("event_time", lt);
+  if (cErr) throw new Error(`turnike_gecisler sayılamadı: ${cErr.message}`);
+
+  const total = count ?? 0;
+  const pageCount = Math.ceil(total / PAGE);
   const rows: TurnikeGecisRow[] = [];
 
-  // Supabase/PostgREST varsayılan sayfa limiti var — tüm satırları sayfalı çekiyoruz.
-  while (true) {
-    const { data, error } = await sb
-      .from("turnike_gecisler")
-      .select("source_id, sicil_no, ad, soyad, firma, alt_firma, pozisyon, bolum, event_time, giris_kapisi, kapi_no, elendi")
-      .gte("event_time", startIso)
-      .lte("event_time", endIso)
-      .order("event_time", { ascending: true })
-      .range(from, from + pageSize - 1);
-
-    if (error) throw new Error(`turnike_gecisler okunamadı: ${error.message}`);
-    const batch = (data ?? []) as unknown as TurnikeGecisRow[];
-    rows.push(...batch);
-    if (batch.length < pageSize) break;
-    from += pageSize;
+  for (let i = 0; i < pageCount; i += CONCURRENCY) {
+    const batch = Array.from({ length: Math.min(CONCURRENCY, pageCount - i) }, (_, k) => i + k);
+    const results = await Promise.all(
+      batch.map((p) =>
+        base()
+          .order("event_time", { ascending: true })
+          .order("sicil_no", { ascending: true })
+          .range(p * PAGE, p * PAGE + PAGE - 1)
+      )
+    );
+    for (const r of results) {
+      if (r.error) throw new Error(`turnike_gecisler okunamadı: ${r.error.message}`);
+      rows.push(...((r.data ?? []) as unknown as TurnikeGecisRow[]));
+    }
   }
+
+  rows.sort((a, b) => a.event_time.localeCompare(b.event_time));
+  return rows;
+}
+
+/**
+ * Duvar saati cinsinden [startWall, endWall) aralığındaki geçişleri okur.
+ * Sorgu sınırları gerçek UTC'ye çevrilir (bkz. lib/engine/tz.ts).
+ */
+export async function fetchPdksEvents(startWall: Date, endWall: Date): Promise<PdksEventsResult> {
+  const rows = await fetchEventRowsCached(
+    wallClockToUtcIso(startWall),
+    wallClockToUtcIso(endWall)
+  );
 
   const events: PdksRawEvent[] = [];
   const personByS = new Map<string, PersonInfo>();
-  const lastSeenTs = new Map<string, number>();
 
   rows.forEach((r, idx) => {
-    const dt = new Date(r.event_time);
     events.push({
       sicil: r.sicil_no,
       ad: (r.ad ?? "").trim(),
       soyad: (r.soyad ?? "").trim(),
-      dt,
+      dt: utcIsoToWallClock(r.event_time),
       ok: r.giris_kapisi ?? "",
       firma: r.firma ?? "",
       sube: r.alt_firma ?? "",
@@ -80,20 +128,35 @@ export async function fetchPdksEvents(startIso: string, endIso: string): Promise
       idx,
     });
 
-    const ts = dt.getTime();
-    const prevTs = lastSeenTs.get(r.sicil_no) ?? -Infinity;
-    if (ts >= prevTs) {
-      lastSeenTs.set(r.sicil_no, ts);
-      personByS.set(r.sicil_no, {
-        sicil: r.sicil_no,
-        ad: (r.ad ?? "").trim(),
-        soyad: (r.soyad ?? "").trim(),
-        takimLideri: (r.pozisyon ?? "").trim() || "Bilinmiyor",
-        bolum: r.bolum ?? "",
-        firma: r.firma ?? "",
-      });
-    }
+    // rows kronolojik sıralı olduğu için son yazan en güncel bilgidir.
+    personByS.set(r.sicil_no, {
+      sicil: r.sicil_no,
+      ad: (r.ad ?? "").trim(),
+      soyad: (r.soyad ?? "").trim(),
+      takimLideri: (r.pozisyon ?? "").trim() || "Bilinmiyor",
+      bolum: (r.bolum ?? "").trim(),
+      firma: (r.firma ?? "").trim(),
+      unvan: (r.alt_firma ?? "").trim(),
+    });
   });
 
   return { events, personByS };
+}
+
+/** Kapı Ayarları ekranı için: veride görülen tüm okuyucu adları. */
+export async function fetchDistinctReaders(): Promise<string[]> {
+  const sb = supabaseServer();
+  const set = new Set<string>();
+  for (let p = 0; p < 20; p++) {
+    const { data, error } = await sb
+      .from("turnike_gecisler")
+      .select("giris_kapisi")
+      .order("event_time", { ascending: false })
+      .range(p * PAGE, p * PAGE + PAGE - 1);
+    if (error) throw new Error(`okuyucular okunamadı: ${error.message}`);
+    const batch = (data ?? []) as unknown as { giris_kapisi: string }[];
+    batch.forEach((r) => r.giris_kapisi && set.add(r.giris_kapisi));
+    if (batch.length < PAGE) break;
+  }
+  return [...set].sort((a, b) => a.localeCompare(b, "tr"));
 }

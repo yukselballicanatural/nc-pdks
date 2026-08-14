@@ -1,7 +1,7 @@
 // Kaynak: pdks_app_stabil_v8_4.py satır 992-1134
 // (_alarm_split_events, _alarm_vardiya_recs, detect_alarms, _alarm_uname). Birebir port.
 import { ALARM_DEDUP_SN, ALARM_KART_SN } from "./constants";
-import { mesaiGunu } from "./mesaiGunu";
+import { formatHms as fmtHms, mesaiGunu } from "./mesaiGunu";
 import { ReaderConfig } from "./readerConfig";
 import { readerDirection, readerGate } from "./textNorm";
 import type { Alarm, AlarmTipVal, PdksRawEvent } from "./types";
@@ -86,12 +86,6 @@ function alarmVardiyaRecs(
   return vardiyaRecs;
 }
 
-function fmtHms(d: Date): string {
-  const h = String(d.getHours()).padStart(2, "0");
-  const m = String(d.getMinutes()).padStart(2, "0");
-  const s = String(d.getSeconds()).padStart(2, "0");
-  return `${h}:${m}:${s}`;
-}
 
 export interface AlarmUnameFn {
   (sicil: string): string;

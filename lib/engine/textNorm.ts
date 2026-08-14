@@ -32,21 +32,43 @@ export function sortSicilKey(s: unknown): [number, number | string] {
   return /^\d+$/.test(str) ? [0, parseInt(str, 10)] : [1, textNorm(str)];
 }
 
-export function readerIsTurnike(okuyucu: unknown): boolean {
-  return textNorm(okuyucu).includes("TURNIKE");
-}
+// Okuyucu adları küçük ve sabit bir kümedir (bu kurulumda 27 farklı ad), ama bu üç
+// fonksiyon on binlerce olay için çağrılıyor ve her çağrı textNorm (NFKD normalize +
+// regex) yapıyor. Ada göre memoize ediyoruz — aynı girdi aynı sonucu verdiği için
+// davranış değişmez, sadece tekrarlı iş ortadan kalkar.
+const turnikeCache = new Map<string, boolean>();
+const dirCache = new Map<string, Direction>();
+const gateCache = new Map<string, string>();
 
 export type Direction = "in" | "out" | "";
 
+export function readerIsTurnike(okuyucu: unknown): boolean {
+  const key = String(okuyucu ?? "");
+  const hit = turnikeCache.get(key);
+  if (hit !== undefined) return hit;
+  const val = textNorm(key).includes("TURNIKE");
+  turnikeCache.set(key, val);
+  return val;
+}
+
 export function readerDirection(okuyucu: unknown): Direction {
-  const n = textNorm(okuyucu);
-  if (["GIRIS", "GIR", " IN "].some((x) => n.includes(x))) return "in";
-  if (["CIKIS", "CIK", " OUT "].some((x) => n.includes(x))) return "out";
-  return "";
+  const key = String(okuyucu ?? "");
+  const hit = dirCache.get(key);
+  if (hit !== undefined) return hit;
+  const n = textNorm(key);
+  let val: Direction = "";
+  if (["GIRIS", "GIR", " IN "].some((x) => n.includes(x))) val = "in";
+  else if (["CIKIS", "CIK", " OUT "].some((x) => n.includes(x))) val = "out";
+  dirCache.set(key, val);
+  return val;
 }
 
 export function readerGate(okuyucu: unknown): string {
-  const n = textNorm(okuyucu);
-  const m = n.match(/\b([1234])\b/);
-  return m ? m[1] : "";
+  const key = String(okuyucu ?? "");
+  const hit = gateCache.get(key);
+  if (hit !== undefined) return hit;
+  const m = textNorm(key).match(/\b([1234])\b/);
+  const val = m ? m[1] : "";
+  gateCache.set(key, val);
+  return val;
 }
