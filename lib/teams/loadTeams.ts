@@ -1,171 +1,213 @@
 // Takım görünümünün tek giriş noktası.
 //
-// Üç kaynağı birleştirir:
-//   1. teams tablosu          -> takım tanımı (ad, lider, aktiflik)
-//   2. zoho_users.role        -> ÜYELİK, her okumada canlı türetilir
-//   3. team_member_overrides  -> admin'in elle yaptığı taşımalar (türetilene üstün)
+// KİŞİ MERKEZİ: PDKS sicili esas alınır. Her satış personeli için sırayla
+//   1. team_member_overrides  -> admin elle taşımışsa o (en yüksek öncelik)
+//   2. Kolay İK "Departman"    -> İK'nın resmî kaydı
+//   3. Zoho `role`             -> Kolay'da olmayanlar için (Fas ekipleri vb.)
+// bakılır. Üyelik hiçbir yere yazılmaz, her okumada canlı çözülür — böylece
+// biri Kolay veya Zoho'da takım değiştirdiğinde burası kendiliğinden güncellenir.
 //
-// Üyelik tabloya yazılmadığı için Zoho'da bir kişi takım değiştirdiğinde burası
-// kendiliğinden güncellenir; admin düzenlemeleri de override olarak korunur.
-//
-// Ayrıca her Zoho kişisi PDKS sicil numarasıyla eşleştirilir (Employment_No,
-// yoksa normalize isim — bkz. lib/matching/textMatch.ts) ki takım ekranında
-// PDKS'teki çalışma verisi gösterilebilsin.
+// Neden sicil anahtar: kişi iki sistemde iki farklı kimlikle duruyor. Sicil,
+// PDKS'in gerçek çalışma verisinin de anahtarı olduğu için tek ortak kimlik.
 import "server-only";
 import { cache } from "react";
 import { fetchOverrides, fetchTeams, type TeamRow } from "../db/queries/teams";
-import { fetchZohoUsers, type ZohoUserView } from "../db/queries/zohoUsers";
+import { fetchKolayPersonsCache, type KolayPersonRow } from "../db/queries/kolayPersons";
+import { fetchZohoUsers } from "../db/queries/zohoUsers";
 import { fetchPersonnel, type PersonInfo } from "../db/queries/materialized";
 import { buildZohoMatchIndex, matchZohoUser } from "../matching/textMatch";
-import { isLeaderRole } from "./derive";
+import { buildKolayIndex, matchKolayPerson, type KolayMatchKind } from "../kolay/match";
+import type { KolayPerson } from "../kolay/client";
+
+/** Üyenin hangi kaynaktan yerleştirildiği — arayüzde şeffaflık için. */
+export type UyelikKaynagi = "elle" | "kolay" | "zoho" | "yok";
 
 export interface TeamMember {
-  zohoId: string;
+  /** PDKS sicili — bu görünümün anahtarı. */
+  sicil: string;
+  adSoyad: string;
   /** Şirket içinde kullanılan takma ad (Zoho full_name). */
-  takmaAd: string;
-  /** Gerçek ad — PDKS ile eşleşen alan. */
-  gercekAd: string;
-  role: string;
-  region: string;
-  /** PDKS sicil numarası; eşleşmediyse null. */
-  sicil: string | null;
-  eslesme: "employment_no" | "name" | null;
-  /** PDKS'te satış kapsamında mı? (kapsam dışı kişiler PDKS hesabına girmiyor) */
-  pdksVar: boolean;
-  /** Elle atandıysa true — Zoho'daki rolünden bağımsız. */
-  elleAtandi: boolean;
-  /** Elle atanmışsa Zoho'nun söylediği takım (bilgi amaçlı). */
-  zohoTakim: string | null;
+  takmaAd: string | null;
+  unvan: string;
+  kaynak: UyelikKaynagi;
+  /** Kolay'daki karşılığı bulundu mu, hangi güvenle? */
+  kolayEslesme: KolayMatchKind | null;
+  zohoVar: boolean;
+  /** Kolay/Zoho'nun söylediği takım — elle atanmışsa farkı görebilmek için. */
+  otomatikTakim: string | null;
 }
 
 export interface TeamView {
   id: string;
   ad: string;
+  kolayDepartman: string | null;
   sourceRole: string | null;
   aktif: boolean;
-  /** Zoho türevi mi, admin'in açtığı mı? */
+  /** İK kaynağından mı türedi, admin mi açtı? */
   otomatik: boolean;
-  lider: TeamMember | null;
-  liderRole: string | null;
+  /** Hangi kaynaklar bu takımı besliyor. */
+  kaynaklar: ("kolay" | "zoho")[];
+  liderAd: string | null;
+  liderSicil: string | null;
   uyeler: TeamMember[];
 }
 
 export interface TeamsData {
   teams: TeamView[];
-  /** Hiçbir takıma girmeyen aktif Zoho kişileri (Finance, IT, üst yönetim vb.). */
+  /** Hiçbir takıma yerleşemeyen satış personeli. */
   takimsiz: TeamMember[];
-  /** Takım tanımı hiç yok — migration çalıştırıldı ama eşitleme yapılmadı. */
+  /** Takım tanımı hiç yok — SQL çalıştırıldı ama eşitleme yapılmadı. */
   bosMu: boolean;
+  /** Kolay önbelleği boş mu — "Kolay ile Eşitle" gerekiyor. */
+  kolayBosMu: boolean;
+  kolaySyncedAt: string | null;
   toplamUye: number;
-  /** PDKS'te karşılığı bulunamayan üye sayısı. */
-  eslesmeyen: number;
-}
-
-function buildMember(
-  u: ZohoUserView,
-  sicilByZoho: Map<string, { sicil: string; eslesme: "employment_no" | "name" }>,
-  personByS: Map<string, PersonInfo>,
-  override: { teamId: string | null } | undefined,
-  zohoTakimAdi: string | null
-): TeamMember {
-  const m = sicilByZoho.get(u.id);
-  return {
-    zohoId: u.id,
-    takmaAd: u.fullName,
-    gercekAd: u.originalAgentName,
-    role: u.role,
-    region: u.region,
-    sicil: m?.sicil ?? null,
-    eslesme: m?.eslesme ?? null,
-    pdksVar: m ? personByS.has(m.sicil) : false,
-    elleAtandi: override !== undefined,
-    zohoTakim: zohoTakimAdi,
-  };
+  kolaysiz: number;
+  zohosuz: number;
 }
 
 export const loadTeamsData = cache(async function loadTeamsData(): Promise<TeamsData> {
-  const [teams, overrides, zoho, personByS] = await Promise.all([
+  const [teams, overrides, zoho, kolayCache, personByS] = await Promise.all([
     fetchTeams(),
     fetchOverrides(),
     fetchZohoUsers(),
+    fetchKolayPersonsCache(),
     fetchPersonnel(),
   ]);
 
-  // Zoho kişisi -> PDKS sicil. Eşleşme yönü PDKS'ten Zoho'ya kurulu olduğu için
-  // (matchZohoUser sicil alır) tersine çevirmek üzere PDKS listesini geziyoruz.
-  const index = buildZohoMatchIndex(zoho.raw);
-  const sicilByZoho = new Map<string, { sicil: string; eslesme: "employment_no" | "name" }>();
-  for (const p of personByS.values()) {
-    const hit = matchZohoUser(p.sicil, p.ad, p.soyad, index);
-    if (hit && !sicilByZoho.has(hit.zohoId)) {
-      sicilByZoho.set(hit.zohoId, { sicil: p.sicil, eslesme: hit.matchedBy });
-    }
-  }
+  /* ── kişi eşleştirme indeksleri ── */
 
-  const overrideByZoho = new Map(overrides.map((o) => [o.zohoUserId, o]));
-  const teamBySourceRole = new Map<string, TeamRow>();
-  for (const t of teams) if (t.sourceRole) teamBySourceRole.set(t.sourceRole, t);
-
-  const aktifZoho = zoho.rows.filter((u) => u.status === "active");
-
-  /** Kişinin Zoho'dan türeyen takımı (override uygulanmadan önce). */
-  const derivedTeamOf = (u: ZohoUserView): TeamRow | undefined =>
-    u.role ? teamBySourceRole.get(u.role) : undefined;
-
-  // Nihai yerleşim: override varsa o, yoksa türetilmiş takım.
-  const membersByTeam = new Map<string, TeamMember[]>();
-  const takimsiz: TeamMember[] = [];
-  const liderZohoIds = new Set(teams.map((t) => t.liderZohoId).filter(Boolean) as string[]);
-
-  for (const u of aktifZoho) {
-    const derived = derivedTeamOf(u);
-    const ov = overrideByZoho.get(u.id);
-    const member = buildMember(u, sicilByZoho, personByS, ov, derived?.ad ?? null);
-
-    // Lider, üye listesinde tekrar görünmesin.
-    if (liderZohoIds.has(u.id) && !ov) continue;
-
-    const hedefId = ov ? ov.teamId : (derived?.id ?? null);
-    if (!hedefId) {
-      // Takıma girmeyenler: takım dışı birimler + override ile çıkarılanlar.
-      // Lider rolündeki yöneticileri "takımsız" diye listelemek yanıltıcı olur.
-      if (!isLeaderRole(u.role)) takimsiz.push(member);
-      continue;
-    }
-    const list = membersByTeam.get(hedefId) ?? [];
-    list.push(member);
-    membersByTeam.set(hedefId, list);
-  }
-
-  const byName = (a: TeamMember, b: TeamMember) =>
-    (a.takmaAd || a.gercekAd).localeCompare(b.takmaAd || b.gercekAd, "tr");
-
+  const zohoIndex = buildZohoMatchIndex(zoho.raw);
   const zohoById = new Map(zoho.rows.map((u) => [u.id, u]));
 
+  // Kolay önbelleği KolayPerson biçimine indirgenip mevcut isim eşleştiricisine
+  // veriliyor (Kolay'da sicil alanı yok, eşleştirme isimle yapılmak zorunda).
+  const kolayAsPeople: KolayPerson[] = kolayCache.map((p) => ({
+    id: p.kolayId,
+    firstName: p.ad,
+    lastName: p.soyad,
+  }));
+  const kolayIndex = buildKolayIndex(kolayAsPeople);
+  const kolayById = new Map<string, KolayPersonRow>(kolayCache.map((p) => [p.kolayId, p]));
+
+  /* ── takım arama tabloları ── */
+
+  const teamByKolayDep = new Map<string, TeamRow>();
+  const teamByZohoRole = new Map<string, TeamRow>();
+  for (const t of teams) {
+    if (t.kolayDepartman) teamByKolayDep.set(t.kolayDepartman, t);
+    if (t.sourceRole) teamByZohoRole.set(t.sourceRole, t);
+  }
+  const teamById = new Map(teams.map((t) => [t.id, t]));
+  const overrideBySicil = new Map(overrides.map((o) => [o.sicil, o]));
+
+  /* ── her satış personelini yerleştir ── */
+
+  const membersByTeam = new Map<string, TeamMember[]>();
+  const takimsiz: TeamMember[] = [];
+  let kolaysiz = 0;
+  let zohosuz = 0;
+  // Lider sicili: takım id -> sicil (üye listesinden çıkarılır).
+  const liderSicilByTeam = new Map<string, string>();
+  const liderAdByTeam = new Map<string, string>();
+
+  for (const p of personByS.values()) {
+    const adSoyad = `${p.ad} ${p.soyad}`.trim() || p.sicil;
+
+    const kolayHit = matchKolayPerson(p.ad, p.soyad, kolayIndex);
+    const kolayRow = kolayHit ? kolayById.get(kolayHit.person.id) : undefined;
+    const zohoHit = matchZohoUser(p.sicil, p.ad, p.soyad, zohoIndex);
+    const zohoRow = zohoHit ? zohoById.get(zohoHit.zohoId) : undefined;
+
+    if (!kolayRow) kolaysiz++;
+    if (!zohoRow) zohosuz++;
+
+    // Otomatik yerleşim: Kolay önce, sonra Zoho.
+    const kolayTeam = kolayRow?.departman ? teamByKolayDep.get(kolayRow.departman) : undefined;
+    const zohoTeam = zohoRow?.role ? teamByZohoRole.get(zohoRow.role) : undefined;
+    const otomatik = kolayTeam ?? zohoTeam;
+
+    const ov = overrideBySicil.get(p.sicil);
+    const hedef = ov ? (ov.teamId ? teamById.get(ov.teamId) : undefined) : otomatik;
+
+    const member: TeamMember = {
+      sicil: p.sicil,
+      adSoyad,
+      takmaAd: zohoRow?.fullName || null,
+      unvan: p.unvan || kolayRow?.unvan || "",
+      kaynak: ov ? "elle" : kolayTeam ? "kolay" : zohoTeam ? "zoho" : "yok",
+      kolayEslesme: kolayHit?.kind ?? null,
+      zohoVar: Boolean(zohoRow),
+      otomatikTakim: otomatik?.ad ?? null,
+    };
+
+    // Bu kişi takımın lideri mi? (Kolay yönetici id'si veya Zoho lider kaydı)
+    if (hedef) {
+      if (
+        (hedef.liderKolayId && kolayRow?.kolayId === hedef.liderKolayId) ||
+        (hedef.liderZohoId && zohoRow?.id === hedef.liderZohoId)
+      ) {
+        liderSicilByTeam.set(hedef.id, p.sicil);
+        liderAdByTeam.set(hedef.id, adSoyad);
+        continue; // lider üye listesinde tekrar görünmesin
+      }
+    }
+
+    if (!hedef) {
+      takimsiz.push(member);
+      continue;
+    }
+    const list = membersByTeam.get(hedef.id) ?? [];
+    list.push(member);
+    membersByTeam.set(hedef.id, list);
+  }
+
+  /* ── lider adı: PDKS'te olmayan liderler için kaynaktan ── */
+
+  function liderAdiOf(t: TeamRow): string | null {
+    const hit = liderAdByTeam.get(t.id);
+    if (hit) return hit;
+    if (t.liderKolayId) {
+      const k = kolayById.get(t.liderKolayId);
+      if (k?.tamAd) return k.tamAd;
+    }
+    if (t.liderZohoId) {
+      const z = zohoById.get(t.liderZohoId);
+      if (z) return z.fullName || z.originalAgentName || null;
+    }
+    return null;
+  }
+
+  const byName = (a: TeamMember, b: TeamMember) => a.adSoyad.localeCompare(b.adSoyad, "tr");
+
   const views: TeamView[] = teams.map((t) => {
-    const liderUser = t.liderZohoId ? zohoById.get(t.liderZohoId) : undefined;
+    const kaynaklar: ("kolay" | "zoho")[] = [];
+    if (t.kolayDepartman) kaynaklar.push("kolay");
+    if (t.sourceRole) kaynaklar.push("zoho");
     return {
       id: t.id,
       ad: t.ad,
+      kolayDepartman: t.kolayDepartman,
       sourceRole: t.sourceRole,
       aktif: t.aktif,
-      otomatik: t.sourceRole !== null,
-      liderRole: t.liderRole,
-      lider: liderUser
-        ? buildMember(liderUser, sicilByZoho, personByS, undefined, null)
-        : null,
+      otomatik: kaynaklar.length > 0,
+      kaynaklar,
+      liderAd: liderAdiOf(t),
+      liderSicil: liderSicilByTeam.get(t.id) ?? null,
       uyeler: (membersByTeam.get(t.id) ?? []).sort(byName),
     };
   });
 
   const toplamUye = views.reduce((n, t) => n + t.uyeler.length, 0);
-  const eslesmeyen = views.reduce((n, t) => n + t.uyeler.filter((u) => !u.sicil).length, 0);
 
   return {
     teams: views,
     takimsiz: takimsiz.sort(byName),
     bosMu: teams.length === 0,
+    kolayBosMu: kolayCache.length === 0,
+    kolaySyncedAt: kolayCache[0]?.syncedAt ?? null,
     toplamUye,
-    eslesmeyen,
+    kolaysiz,
+    zohosuz,
   };
 });

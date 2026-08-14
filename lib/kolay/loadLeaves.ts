@@ -11,8 +11,9 @@
 // hesabından düşülmesi ayrı bir karar ve kullanıcı onayı gerektirir.
 import "server-only";
 import { cache } from "react";
-import { fetchKolayLeaves, fetchKolayPeople, KolayError, type KolayLeave } from "./client";
+import { fetchKolayLeaves, KolayError, type KolayLeave } from "./client";
 import { buildKolayIndex, matchKolayPerson, type KolayMatchKind } from "./match";
+import { fetchKolayPersonsCache } from "../db/queries/kolayPersons";
 import { fetchPersonnel } from "../db/queries/materialized";
 import { addDays, formatGs } from "../engine/mesaiGunu";
 import { parseDateParam } from "../engine/tz";
@@ -26,6 +27,9 @@ export interface LeaveRecord {
   baslangic: string;
   bitis: string;
   durum: string;
+  /** Kolay'ın kendi saydığı iş günü sayısı. */
+  kolayGun: number | null;
+  ucretli: boolean | null;
   /** İzne denk gelen vardiya günleri (dd.MM.yyyy) — PDKS ile kesiştirmek için. */
   gunler: string[];
 }
@@ -49,8 +53,7 @@ export interface LeavesData {
 }
 
 function leaveTypeName(l: KolayLeave): string {
-  if (typeof l.leaveType === "string") return l.leaveType;
-  return l.leaveType?.name ?? l.leaveTypeName ?? "Bilinmiyor";
+  return l.type?.name?.trim() || "Bilinmiyor";
 }
 
 /** "2026-08-03 09:00:00" / "2026-08-03" -> "2026-08-03" */
@@ -83,13 +86,14 @@ export const loadLeavesData = cache(async function loadLeavesData(
 ): Promise<LeavesData> {
   const personByS = await fetchPersonnel();
 
-  let people: Awaited<ReturnType<typeof fetchKolayPeople>> = [];
-  let personHata: string | null = null;
-  try {
-    people = await fetchKolayPeople(true);
-  } catch (e) {
-    personHata = e instanceof Error ? e.message : "Kolay İK okunamadı";
-  }
+  // Kolay personeli ÖNBELLEKTEN okunur (canlı API her sayfa açılışında çok yavaş).
+  // Önbellek boşsa eşleştirme yapılamaz; kullanıcı "Kolay İK ile Eşitle" çalıştırmalı.
+  const cache = await fetchKolayPersonsCache();
+  const people = cache.map((p) => ({ id: p.kolayId, firstName: p.ad, lastName: p.soyad }));
+  const personHata: string | null =
+    cache.length === 0
+      ? "Kolay İK personel önbelleği boş — Takımlar sayfasından \"Kolay İK ile Eşitle\" çalıştırın."
+      : null;
 
   const index = buildKolayIndex(people);
   const kolayIdBySicil = new Map<string, { id: string; kind: KolayMatchKind }>();
@@ -115,12 +119,11 @@ export const loadLeavesData = cache(async function loadLeavesData(
     const raw = await fetchKolayLeaves({ sd: sdParam, ed: edParam, status: "approved" });
     kullanilabilir = true;
     kayitlar = raw.map((l) => {
-      const kolayId = l.personId ?? l.person?.id ?? "";
+      const kolayId = l.person?.id ?? "";
       const sicil = kolayId ? (sicilByKolayId.get(kolayId) ?? null) : null;
       const p = sicil ? personByS.get(sicil) : undefined;
-      const adSoyad = p
-        ? `${p.ad} ${p.soyad}`.trim()
-        : `${l.person?.firstName ?? ""} ${l.person?.lastName ?? ""}`.trim() || "(bilinmiyor)";
+      // Kolay izin kaydı kişiyi tek parça `name` alanıyla veriyor.
+      const adSoyad = p ? `${p.ad} ${p.soyad}`.trim() : (l.person?.name ?? "").trim() || "(bilinmiyor)";
       return {
         sicil,
         adSoyad,
@@ -130,6 +133,8 @@ export const loadLeavesData = cache(async function loadLeavesData(
         baslangic: dayPart(l.startDate) ?? "",
         bitis: dayPart(l.endDate) ?? "",
         durum: l.status ?? "approved",
+        kolayGun: typeof l.usedDays === "string" ? Number(l.usedDays) || null : (l.usedDays ?? null),
+        ucretli: l.isPaid ?? null,
         gunler: expandDays(l),
       };
     });

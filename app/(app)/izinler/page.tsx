@@ -24,12 +24,14 @@ export default async function IzinlerPage({
       baslangic: k.baslangic,
       bitis: k.bitis,
       gunSayisi: k.gunler.length,
+      kolayGun: k.kolayGun,
+      ucretli: k.ucretli,
       durum: k.durum,
       eslesme: k.eslesme,
     }))
     .sort((a, b) => b.baslangic.localeCompare(a.baslangic) || a.adSoyad.localeCompare(b.adSoyad, "tr"));
 
-  const toplamIzinGunu = izin.kayitlar.reduce((n, k) => n + k.gunler.length, 0);
+  const toplamIzinGunu = izin.kayitlar.reduce((n, k) => n + (k.kolayGun ?? k.gunler.length), 0);
 
   return (
     <>

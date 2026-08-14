@@ -11,6 +11,8 @@ export interface IzinRow {
   baslangic: string;
   bitis: string;
   gunSayisi: number;
+  kolayGun: number | null;
+  ucretli: boolean | null;
   durum: string;
   eslesme: "isim" | "isim_sirasiz" | "isim_kismi" | null;
 }
@@ -101,11 +103,31 @@ export default function IzinlerPanel({
     },
     {
       key: "gun",
-      header: "Gün",
+      header: "İş Günü",
       type: "num",
       align: "right",
-      cell: (r) => <span className="tabular-nums">{r.gunSayisi}</span>,
-      sortValue: (r) => r.gunSayisi,
+      cell: (r) => (
+        <span
+          className="tabular-nums"
+          title={`Takvim günü: ${r.gunSayisi}`}
+        >
+          {r.kolayGun ?? r.gunSayisi}
+        </span>
+      ),
+      sortValue: (r) => r.kolayGun ?? r.gunSayisi,
+    },
+    {
+      key: "ucret",
+      header: "Ücret",
+      cell: (r) =>
+        r.ucretli === null ? (
+          "—"
+        ) : (
+          <span style={{ color: r.ucretli ? "var(--cl-ok)" : "var(--cl-warn)" }}>
+            {r.ucretli ? "Ücretli" : "Ücretsiz"}
+          </span>
+        ),
+      sortValue: (r) => (r.ucretli ? 0 : 1),
     },
     {
       key: "durum",
@@ -125,47 +147,21 @@ export default function IzinlerPanel({
         {yetkiEksik ? (
           <div className="mt-3 space-y-3 text-xs leading-relaxed" style={{ color: "var(--tx-secondary)" }}>
             <p>
-              Kolay İK bağlantısı <span style={{ color: "var(--cl-ok)" }}>kuruldu</span> ve çalışan
-              listesi başarıyla okunuyor. Ancak aynı token ile{" "}
-              <span style={{ color: "var(--tx-primary)" }}>leave/list</span> (izin listesi) uç noktası
-              çağrıldığında Kolay şu yanıtı veriyor:
+              Kolay İK bağlantısı kuruldu ancak izin listesi uç noktası yetki hatası döndürdü:
             </p>
             <p
               className="rounded-lg px-3 py-2 font-mono text-[11px]"
               style={{ background: "rgba(0,0,0,0.3)", color: "var(--cl-danger)" }}
             >
-              Geçersiz API bilgisi, lütfen API anahtarını kontrol edin.
+              {hata ?? "Geçersiz API bilgisi"}
             </p>
             <p>
-              Bu, token&apos;ın geçersiz olduğu anlamına gelmiyor — çalışan listesi tam olarak aynı
-              anahtarla sorunsuz geliyor. Eksik olan şey token&apos;ın{" "}
-              <span style={{ color: "var(--tx-primary)" }}>izin okuma kapsamı</span>.
-            </p>
-            <div
-              className="rounded-xl p-3.5"
-              style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)" }}
-            >
-              <p className="mb-2 font-semibold" style={{ color: "var(--tx-primary)" }}>
-                Yapılması gereken
-              </p>
-              <ol className="list-inside list-decimal space-y-1">
-                <li>
-                  Kolay İK&apos;da{" "}
-                  <span style={{ color: "var(--ac-sky)" }}>Ayarlar → Geliştirici Ayarları</span>{" "}
-                  sayfasını açın (app.kolayik.com/settings/developer-settings).
-                </li>
-                <li>Bu token&apos;ı düzenleyin.</li>
-                <li>
-                  İzin / <span className="font-mono">leave</span> yetkisini işaretleyip kaydedin.
-                </li>
-                <li>Bu sayfayı yenileyin — kod tarafında değişiklik gerekmiyor.</li>
-              </ol>
-            </div>
-            <p style={{ color: "var(--tx-muted)" }}>
-              Not: <span className="font-mono">person/bulk-view</span> ve{" "}
-              <span className="font-mono">unit/show-unit-tree</span> uç noktaları da kapalı. Vardiya
-              ve birim bilgisi yalnızca bu uç noktalarda bulunduğu için vardiya verisi şu an Kolay&apos;dan
-              çekilemiyor; izinle birlikte bu yetkiler de açılırsa vardiyayı da buradan alabiliriz.
+              Bu hata token&apos;ın geçersiz olduğunu değil,{" "}
+              <span style={{ color: "var(--tx-primary)" }}>izin okuma kapsamının</span> kapalı
+              olduğunu gösterir. Kolay İK&apos;da{" "}
+              <span style={{ color: "var(--ac-sky)" }}>Ayarlar → Geliştirici Ayarları</span>&apos;ndan
+              bu token&apos;a <span className="font-mono">leave/list</span> yetkisini verip sayfayı
+              yenileyin; kod tarafında değişiklik gerekmiyor.
             </p>
           </div>
         ) : (
@@ -180,7 +176,8 @@ export default function IzinlerPanel({
   return (
     <div className="space-y-3">
       <p className="text-[11px] leading-relaxed" style={{ color: "var(--tx-muted)" }}>
-        İzin kayıtları Kolay İK&apos;dan canlı okunur ve isim üzerinden PDKS siciline bağlanır.
+        İzin kayıtları Kolay İK&apos;dan canlı okunur; kişiler, Takımlar sayfasındaki &quot;Kolay İK
+        ile Eşitle&quot; ile alınan personel önbelleği üzerinden PDKS siciline bağlanır.
         Çalışma süresi hesabı bu sayfadan <span style={{ color: "var(--tx-secondary)" }}>etkilenmez</span>{" "}
         — izin bilgisi şimdilik yalnızca görüntüleniyor. İzinli günlerin eksik saat hesabından
         düşülmesini isterseniz söylemeniz yeterli.
