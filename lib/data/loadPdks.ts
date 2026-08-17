@@ -28,6 +28,7 @@ import { NO_LEAVE } from "../engine/summary";
 import { leaveLookupOf, loadLeavesData, type IzinGunBilgi } from "../kolay/loadLeaves";
 import { getSession, type SessionPayload } from "../auth/session";
 import { cachedByKey } from "./periodCache";
+import { dataVersion } from "./dataVersion";
 
 export type { PersonInfo };
 
@@ -107,10 +108,13 @@ export const loadPdksData = cache(async function loadPdksData(
   const session = await getSession();
   const tlFilter = session?.role === "tl" ? session.tlName : null;
 
-  // Dönem + yetki aynıysa 60 sn boyunca sorguları tekrarlamayız (sayfalar arası
-  // gezinme bunun sayesinde ağ turu beklemez). isGece gibi kapanış içeren alanlar
-  // saf fonksiyonlardan üretildiği için paylaşılması güvenli.
-  const key = `${range.sdParam}|${range.edParam}|${tlFilter ?? "*"}`;
+  // Dönem + yetki + VERİ SÜRÜMÜ aynıysa 60 sn boyunca sorguları tekrarlamayız
+  // (sayfalar arası gezinme bunun sayesinde ağ turu beklemez). isGece gibi kapanış
+  // içeren alanlar saf fonksiyonlardan üretildiği için paylaşılması güvenli.
+  //
+  // Sürüm anahtarın parçası: senkronizasyon başka bir sunucu örneğinde koşsa bile
+  // damga değişir ve bu örnek eski veriyi sunmaya devam etmez (bkz. dataVersion.ts).
+  const key = `${range.sdParam}|${range.edParam}|${tlFilter ?? "*"}|${await dataVersion()}`;
   return cachedByKey(key, () => buildPdksData(range, session, tlFilter));
 });
 

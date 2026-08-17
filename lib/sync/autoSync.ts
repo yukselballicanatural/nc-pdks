@@ -23,8 +23,17 @@ import { syncTeams } from "../db/queries/teams";
 /** Kilit bu süre boyunca geçerli; sahibi çökerse sonra devralınır. */
 const LOCK_TTL_MS = 5 * 60 * 1000;
 
-/** PDKS kontrolü bu sıklıktan daha sık yapılmaz (kontrol ~0,4 sn sürüyor). */
-const PDKS_CHECK_EVERY_MS = 3 * 60 * 1000;
+/**
+ * Boşta kalındığında PDKS durumunun yeniden doğrulanma sıklığı.
+ *
+ * Bu bir gecikme DEĞİL: yeni kayıt geldiğinde `stale` (maxSourceId > işlenen)
+ * doğrudan true olur ve aşağıdaki eşikten bağımsız olarak hemen işlenir. Buradaki
+ * eşik yalnızca "yapılacak hiçbir şey yokken ne sıklıkta boş tur atılsın"
+ * sorusunu yanıtlıyor — canlı nabız 20 sn'de bir çağırdığı için bunu 3 dakikada
+ * bırakmak durum ekranındaki "son senkronizasyon" saatini gereksiz eski
+ * gösteriyordu.
+ */
+const PDKS_CHECK_EVERY_MS = 60 * 1000;
 
 /** Kolay İK personel/birim bilgisi bu kadar eskiyse tazelenir. */
 const KOLAY_STALE_MS = 6 * 60 * 60 * 1000;

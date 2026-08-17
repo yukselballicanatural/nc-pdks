@@ -39,7 +39,11 @@ export default function SyncPanel({
   health: Health;
 }) {
   const router = useRouter();
-  const [status, setStatus] = useState(initial);
+  // Durum bilinçli olarak state'te TUTULMUYOR: `useState(initial)` prop değişince
+  // güncellenmez, dolayısıyla canlı yenileme (LiveSync → router.refresh()) sunucudan
+  // taze durum getirdiğinde ekran eski değeri göstermeye devam ederdi. Prop'un
+  // kendisi tek kaynak; tazeleme sunucu tarafında olur.
+  const status = initial;
   const [running, setRunning] = useState(false);
   const [log, setLog] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -75,8 +79,8 @@ export default function SyncPanel({
         if (data.done) break;
       }
 
-      const st = await fetch("/api/sync").then((r) => r.json());
-      if (!st.error) setStatus(st);
+      // Durumu ayrıca çekmiyoruz: refresh sunucu bileşenini yeniden çizdirir ve
+      // taze durum prop olarak gelir (tek kaynak).
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Bilinmeyen hata");
@@ -171,9 +175,11 @@ export default function SyncPanel({
         </div>
         Yeni turnike kaydı geldiğinde sistem bunu kendisi görüp yalnızca etkilenen günleri
         hesaplayıp üstüne ekliyor. Kolay İK personel ve izin bilgisi de kendiliğinden
-        tazeleniyor. İki tetikleyici var: zamanlanmış görev (10 dakikada bir) ve sayfa
-        açılışlarının ardından çalışan arka plan kontrolü. Eşzamanlı çalışmayı veritabanı
-        kilidi engelliyor.
+        tazeleniyor. Üç tetikleyici var: <span style={{ color: "var(--tx-primary)" }}>sayfa
+        açıkken 20 saniyede bir çalışan canlı kontrol</span> (sağ altta &quot;Canlı&quot;
+        göstergesi), zamanlanmış görev (dakikada bir) ve sayfa açılışlarının ardından çalışan
+        arka plan kontrolü. Eşzamanlı çalışmayı veritabanı kilidi engelliyor. Veri değiştiğinde
+        ekran kendiliğinden tazelenir — sayfayı yenilemeniz gerekmez.
         {health.kolayTabloHazir && (
           <>
             {" "}
