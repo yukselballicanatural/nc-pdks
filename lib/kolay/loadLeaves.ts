@@ -55,6 +55,16 @@ export interface LeavesData {
   ucretliGunler: Map<string, Set<string>>;
   /** sicil -> ücretsiz izinli gün kümesi. */
   ucretsizGunler: Map<string, Set<string>>;
+  /**
+   * sicil -> gün -> izin ayrıntısı. Günlük Detay ekranında "Yıllık İzin",
+   * "Hastalık İzni (Raporlu)" gibi türü göstermek için.
+   */
+  gunBilgi: Map<string, Map<string, IzinGunBilgi>>;
+}
+
+export interface IzinGunBilgi {
+  tur: string;
+  ucretli: boolean;
 }
 
 function leaveTypeName(l: KolayLeave): string {
@@ -152,8 +162,21 @@ export const loadLeavesData = cache(async function loadLeavesData(
   // ikisine farklı davranıyor.
   const ucretliGunler = new Map<string, Set<string>>();
   const ucretsizGunler = new Map<string, Set<string>>();
+  const gunBilgi = new Map<string, Map<string, IzinGunBilgi>>();
   for (const k of kayitlar) {
     if (!k.sicil) continue;
+
+    // Gün bazlı ayrıntı (tür adı) — aynı güne iki kayıt düşerse ücretsiz olan
+    // kazanır, çünkü eksik saat kuralında belirleyici olan o.
+    const bilgiMap = gunBilgi.get(k.sicil) ?? new Map<string, IzinGunBilgi>();
+    for (const g of k.gunler) {
+      const mevcut = bilgiMap.get(g);
+      if (!mevcut || (mevcut.ucretli && k.ucretli !== true)) {
+        bilgiMap.set(g, { tur: k.tur, ucretli: k.ucretli === true });
+      }
+    }
+    gunBilgi.set(k.sicil, bilgiMap);
+
     // isPaid bilinmiyorsa (null) TEMKİNLİ davranıp ücretli saymıyoruz —
     // yanlışlıkla eksik saat silmek, fazladan eksik göstermekten kötü.
     const hedef = k.ucretli === true ? ucretliGunler : ucretsizGunler;
@@ -173,6 +196,7 @@ export const loadLeavesData = cache(async function loadLeavesData(
     kismiEslesen,
     ucretliGunler,
     ucretsizGunler,
+    gunBilgi,
   };
 });
 

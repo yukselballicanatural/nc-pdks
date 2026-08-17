@@ -425,32 +425,31 @@ export default function TakimlarPanel({
     return (
       <div className="glass-card p-6">
         <h3 className="text-sm font-semibold" style={{ color: "var(--tx-primary)" }}>
-          Takımlar henüz oluşturulmadı
+          Takımlar hazırlanıyor…
         </h3>
         <p className="mt-2 max-w-3xl text-xs leading-relaxed" style={{ color: "var(--tx-secondary)" }}>
-          Takım yapısı iki kaynaktan türetilir: Kolay İK&apos;daki{" "}
-          <span style={{ color: "var(--tx-primary)" }}>Departman</span> birimi ve Zoho&apos;daki{" "}
-          <span style={{ color: "var(--tx-primary)" }}>role</span> alanı. Aşağıdaki düğme önce Kolay
-          İK&apos;dan personeli çeker, sonra iki kaynaktaki takımları birleştirip oluşturur ve
-          liderleri otomatik atar.
+          Takım yapısı iki kaynaktan <span style={{ color: "var(--tx-primary)" }}>otomatik</span>{" "}
+          türetilir: Kolay İK&apos;daki <span style={{ color: "var(--tx-primary)" }}>Departman</span>{" "}
+          birimi ve Zoho&apos;daki <span style={{ color: "var(--tx-primary)" }}>role</span> alanı.
+          Arka planda çalışan senkronizasyon bunu kendisi kuracak — birkaç dakika içinde bu sayfayı
+          yenilediğinizde takımlar görünür.
         </p>
-        {isAdmin ? (
+        <p className="mt-2 text-xs" style={{ color: "var(--tx-muted)" }}>
+          Beklemek istemiyorsanız aşağıdaki düğmeyle hemen başlatabilirsiniz.
+        </p>
+        {isAdmin && (
           <button
             type="button"
             disabled={pending}
             onClick={() => run(syncKolayAction)}
-            className="mt-4 rounded-xl px-4 py-2 text-sm font-semibold"
+            className="mt-3 rounded-xl px-4 py-2 text-sm font-semibold"
             style={{
               background: "linear-gradient(135deg, rgba(56,189,248,0.9), rgba(6,214,160,0.85))",
               color: "#06091a",
             }}
           >
-            {pending ? "Oluşturuluyor…" : "Kolay İK'dan Takımları Oluştur"}
+            {pending ? "Kuruluyor…" : "Şimdi Kur"}
           </button>
-        ) : (
-          <p className="mt-3 text-xs" style={{ color: "var(--tx-muted)" }}>
-            Bu işlem için yönetici yetkisi gerekli.
-          </p>
         )}
         <div className="mt-3">
           <Mesaj />
@@ -509,7 +508,7 @@ export default function TakimlarPanel({
               type="button"
               disabled={pending}
               onClick={() => run(syncKolayAction)}
-              title="Kolay İK'dan personel ve birim bilgisini yeniden çek"
+              title="Otomatiği beklemeden Kolay İK'dan personel ve birim bilgisini şimdi çek"
               className="rounded-lg px-3 py-1.5 text-xs font-semibold"
               style={{
                 background: "linear-gradient(135deg, rgba(56,189,248,0.85), rgba(6,214,160,0.8))",
@@ -533,9 +532,10 @@ export default function TakimlarPanel({
             color: "#fbbf24",
           }}
         >
-          Kolay İK personel önbelleği boş — takımlar şu an yalnızca Zoho&apos;dan türetiliyor.
-          <span style={{ color: "var(--tx-primary)" }}> Kolay İK ile Eşitle</span> düğmesine basarak
-          departman ve yönetici bilgisini alın.
+          Kolay İK personel önbelleği henüz doldurulmadı — takımlar şu an yalnızca Zoho&apos;dan
+          türetiliyor. Arka plan senkronizasyonu bunu kendisi tazeleyecek; beklemek istemezseniz
+          <span style={{ color: "var(--tx-primary)" }}> Kolay İK ile Eşitle</span> düğmesini
+          kullanabilirsiniz.
         </p>
       )}
 

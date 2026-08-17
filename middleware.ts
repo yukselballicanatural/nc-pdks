@@ -10,7 +10,15 @@ function secretKey() {
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  if (pathname.startsWith("/login") || pathname.startsWith("/api/auth") || pathname.startsWith("/_next")) {
+  // /api/cron oturum kullanmaz; zamanlanmış görev tarafından çağrılır ve kendi
+  // yetkilendirmesini yapar (CRON_SECRET / x-sync-secret). Burada engellenirse
+  // cron login sayfasına yönlendirilir ve otomasyon hiç çalışmaz.
+  if (
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/api/cron") ||
+    pathname.startsWith("/_next")
+  ) {
     return NextResponse.next();
   }
 

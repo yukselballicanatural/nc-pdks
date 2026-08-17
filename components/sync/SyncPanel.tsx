@@ -23,7 +23,21 @@ interface SyncResult {
   message: string;
 }
 
-export default function SyncPanel({ initial }: { initial: SyncStatus }) {
+interface Health {
+  kilitHazir: boolean;
+  kolayTabloHazir: boolean;
+  kolayKayit: number;
+  kolaySyncedAt: string | null;
+  eksikler: string[];
+}
+
+export default function SyncPanel({
+  initial,
+  health,
+}: {
+  initial: SyncStatus;
+  health: Health;
+}) {
   const router = useRouter();
   const [status, setStatus] = useState(initial);
   const [running, setRunning] = useState(false);
@@ -118,8 +132,68 @@ export default function SyncPanel({ initial }: { initial: SyncStatus }) {
         </div>
       </div>
 
+      {health.eksikler.length > 0 ? (
+        <div
+          className="rounded-xl p-4 text-xs leading-relaxed"
+          style={{
+            background: "rgba(248,113,113,0.1)",
+            border: "1px solid rgba(248,113,113,0.28)",
+            color: "var(--tx-secondary)",
+          }}
+        >
+          <div className="mb-1.5 text-sm font-semibold" style={{ color: "var(--cl-danger)" }}>
+            Otomatik senkronizasyon çalışamıyor — veritabanı kurulumu eksik
+          </div>
+          <ul className="mt-2 list-inside list-disc space-y-1">
+            {health.eksikler.map((e) => (
+              <li key={e}>{e}</li>
+            ))}
+          </ul>
+          <p className="mt-2" style={{ color: "var(--tx-muted)" }}>
+            Bu adımlar tamamlanana kadar aşağıdaki düğmelerle elle senkronize edebilirsiniz;
+            hesaplama doğru çalışır, yalnızca otomatik tetikleme devre dışıdır.
+          </p>
+        </div>
+      ) : null}
+
+      <div
+        className="rounded-xl p-4 text-xs leading-relaxed"
+        style={{
+          background: "rgba(6,214,160,0.08)",
+          border: "1px solid rgba(6,214,160,0.22)",
+          color: "var(--tx-secondary)",
+        }}
+      >
+        <div className="mb-1.5 text-sm font-semibold" style={{ color: "var(--ac-cyan)" }}>
+          {health.eksikler.length === 0
+            ? "Otomatik çalışıyor — elle bir şey yapmanız gerekmiyor"
+            : "Otomatik çalışma nasıl işler"}
+        </div>
+        Yeni turnike kaydı geldiğinde sistem bunu kendisi görüp yalnızca etkilenen günleri
+        hesaplayıp üstüne ekliyor. Kolay İK personel ve izin bilgisi de kendiliğinden
+        tazeleniyor. İki tetikleyici var: zamanlanmış görev (10 dakikada bir) ve sayfa
+        açılışlarının ardından çalışan arka plan kontrolü. Eşzamanlı çalışmayı veritabanı
+        kilidi engelliyor.
+        {health.kolayTabloHazir && (
+          <>
+            {" "}
+            Kolay İK önbelleğinde{" "}
+            <span style={{ color: "var(--tx-primary)" }}>{health.kolayKayit}</span> çalışan var
+            {health.kolaySyncedAt && (
+              <> (son tazeleme: {new Date(health.kolaySyncedAt).toLocaleString("tr-TR")})</>
+            )}
+            .
+          </>
+        )}
+        <br />
+        <br />
+        Aşağıdaki düğmelere yalnızca <span style={{ color: "var(--tx-primary)" }}>beklemek
+        istemediğinizde</span> ya da Kapı Ayarları&apos;nı değiştirdikten sonra hemen sonuç
+        görmek istediğinizde ihtiyaç duyarsınız.
+      </div>
+
       <div className="glass-card p-4">
-        <div className="mb-3 text-sm font-medium">İşlemler</div>
+        <div className="mb-3 text-sm font-medium">Elle Tetikleme (isteğe bağlı)</div>
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => sync(false)}
@@ -130,7 +204,7 @@ export default function SyncPanel({ initial }: { initial: SyncStatus }) {
               color: "#06091a",
             }}
           >
-            {running ? "Çalışıyor…" : "Yeni Verileri Al"}
+            {running ? "Çalışıyor…" : "Şimdi Kontrol Et"}
           </button>
           <button
             onClick={() => {
@@ -153,12 +227,13 @@ export default function SyncPanel({ initial }: { initial: SyncStatus }) {
           </button>
         </div>
         <p className="mt-3 text-xs leading-relaxed" style={{ color: "var(--tx-muted)" }}>
-          <strong style={{ color: "var(--tx-secondary)" }}>Yeni Verileri Al:</strong> yalnızca son
-          senkronizasyondan sonra eklenen turnike kayıtlarını okur ve etkilenen günleri yeniden
-          hesaplar — saniyeler sürer.
+          <strong style={{ color: "var(--tx-secondary)" }}>Şimdi Kontrol Et:</strong> otomatiğin
+          bir sonraki turunu beklemeden yeni kayıtları işler — saniyeler sürer.
           <br />
           <strong style={{ color: "var(--tx-secondary)" }}>Tümünü Yeniden Hesapla:</strong> Kapı
-          Ayarları veya gece vardiyası listesi değiştiyse gerekir; tüm günleri baştan işler.
+          Ayarları veya gece vardiyası listesi değiştiyse gerekir. Bu değişiklikleri sistem
+          kendisi de fark edip yeniden hesaplamayı başlatır; bu düğme yalnızca hemen bitmesini
+          istediğinizde işe yarar.
         </p>
       </div>
 

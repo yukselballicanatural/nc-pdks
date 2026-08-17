@@ -1,0 +1,13 @@
+-- Otomatik senkronizasyon kilidi.
+--
+-- NEDEN: senkronizasyon artık elle tetiklenmiyor; hem zamanlanmış görev (cron)
+-- hem de sayfa isteklerinin ardından (Next `after()`) çalışabiliyor. Bunlar
+-- aynı anda denk gelirse aynı günü iki kez hesaplayıp birbirinin yazdığını
+-- silebilirler. Bu sütun dağıtık bir kilit olarak kullanılır: bir çalıştırma
+-- başlamadan önce koşullu UPDATE ile kilidi almaya çalışır, alamazsa hiç
+-- başlamaz.
+--
+-- Kilit, sahibi çökse bile takılı kalmasın diye zaman aşımlıdır (bkz.
+-- lib/sync/autoSync.ts → LOCK_TTL_MS); eski bir kilit yeni çalıştırma
+-- tarafından devralınabilir.
+alter table pdks_sync_state add column if not exists auto_lock_at timestamptz;

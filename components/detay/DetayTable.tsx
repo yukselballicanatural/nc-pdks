@@ -22,6 +22,10 @@ export interface DetayRow {
   netFark: number;
   kayit: number | null;
   duzeltmeNeden: string | null;
+  /** Kolay İK'dan gelen izin türü ("Yıllık İzin", "Hastalık İzni (Raporlu)"...). */
+  izinTuru: string | null;
+  /** Ücretli izin eksik saate girmez; ücretsiz girer (bkz. lib/engine/summary.ts). */
+  izinUcretli: boolean | null;
   hasData: boolean;
   hafta: boolean;
 }
@@ -44,6 +48,9 @@ export default function DetayTable({ rows, canEdit }: { rows: DetayRow[]; canEdi
         if (tip === "Eksik Çalışma" && (!r.hasData || r.netFark >= 0)) return false;
         if (tip === "Düzeltilmiş" && !r.duzeltmeNeden) return false;
         if (tip === "Hafta Sonu" && !r.hafta) return false;
+        if (tip === "İzinli" && !r.izinTuru) return false;
+        if (tip === "Ücretli İzin" && !(r.izinTuru && r.izinUcretli)) return false;
+        if (tip === "Ücretsiz İzin" && !(r.izinTuru && r.izinUcretli === false)) return false;
         return true;
       }),
     [rows, tl, tip]
@@ -60,6 +67,39 @@ export default function DetayTable({ rows, canEdit }: { rows: DetayRow[]; canEdi
         <span style={{ color: r.hafta ? "var(--cl-warn)" : "var(--tx-secondary)" }}>{r.gun}</span>
       ),
       sortValue: (r) => r.gun,
+    },
+    {
+      key: "izin",
+      header: "İzin",
+      cell: (r) =>
+        r.izinTuru ? (
+          <span
+            title={
+              r.izinUcretli
+                ? `${r.izinTuru} — ücretli, eksik saate girmez`
+                : `${r.izinTuru} — ücretsiz, eksik saat olarak sayılır`
+            }
+            className="whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-medium"
+            style={
+              r.izinUcretli
+                ? {
+                    background: "rgba(6,214,160,0.12)",
+                    border: "1px solid rgba(6,214,160,0.32)",
+                    color: "#06d6a0",
+                  }
+                : {
+                    background: "rgba(251,191,36,0.12)",
+                    border: "1px solid rgba(251,191,36,0.32)",
+                    color: "#fbbf24",
+                  }
+            }
+          >
+            {r.izinTuru}
+          </span>
+        ) : (
+          <span style={{ color: "var(--tx-disabled)" }}>-</span>
+        ),
+      sortValue: (r) => r.izinTuru ?? "zzz",
     },
     {
       key: "giris",
@@ -155,20 +195,34 @@ export default function DetayTable({ rows, canEdit }: { rows: DetayRow[]; canEdi
         rows={filtered}
         columns={columns}
         rowKey={(r) => r.key}
-        searchText={(r) => `${r.sicil} ${r.adSoyad} ${r.tarih}`}
+        searchText={(r) => `${r.sicil} ${r.adSoyad} ${r.tarih} ${r.izinTuru ?? ""}`}
         searchPlaceholder="Ad, soyad, sicil veya tarih ara..."
         filters={[
           { label: "Tüm Ünvanlar", options: tlList, value: tl, onChange: setTl },
           {
             label: "Tüm Kayıtlar",
-            options: ["Kayıt Yok", "Eksik Çalışma", "Düzeltilmiş", "Hafta Sonu"],
+            options: [
+              "Kayıt Yok",
+              "Eksik Çalışma",
+              "Düzeltilmiş",
+              "Hafta Sonu",
+              "İzinli",
+              "Ücretli İzin",
+              "Ücretsiz İzin",
+            ],
             value: tip,
             onChange: setTip,
           },
         ]}
         onRowClick={canEdit ? (r) => setEdit(r) : undefined}
         rowClass={(r) =>
-          r.duzeltmeNeden ? "bg-amber-950/20" : !r.hasData && !r.hafta ? "bg-red-950/10" : ""
+          r.duzeltmeNeden
+            ? "bg-amber-950/20"
+            : r.izinTuru && r.izinUcretli
+              ? "bg-emerald-950/10"
+              : !r.hasData && !r.hafta
+                ? "bg-red-950/10"
+                : ""
         }
         pageSize={200}
       />

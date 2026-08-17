@@ -15,7 +15,7 @@ export default async function GunlukDetayPage({
 }) {
   const sp = await searchParams;
   const data = await loadPdksData(sp);
-  const { range, shifts, corLookup, isGece, session } = data;
+  const { range, shifts, corLookup, isGece, session, izinGunBilgi } = data;
 
   const rows: DetayRow[] = [];
   for (const p of visiblePeople(data)) {
@@ -24,8 +24,11 @@ export default async function GunlukDetayPage({
     const totalStd = std + (gece ? N_MOLA : G_MOLA);
     const adSoyad = `${p.ad} ${p.soyad}`.trim() || p.sicil;
 
+    const izinler = izinGunBilgi.get(p.sicil);
+
     for (let d = range.sd; d <= range.ed; d = addDays(d, 1)) {
       const gs = formatGs(d);
+      const izin = izinler?.get(gs) ?? null;
       const sh = shifts.get(shiftKey(p.sicil, gs));
       const cor = corLookup.get(p.sicil, gs);
       const net = getNet(p.sicil, gs, shifts, corLookup);
@@ -46,6 +49,8 @@ export default async function GunlukDetayPage({
         netFark: net > 0 ? net - std : 0,
         kayit: sh ? sh.cnt : null,
         duzeltmeNeden: cor ? String(cor.neden ?? "Düzeltme") : null,
+        izinTuru: izin?.tur ?? null,
+        izinUcretli: izin?.ucretli ?? null,
         hasData: Boolean(sh) || Boolean(cor),
         hafta: !isWeekday(d),
       });

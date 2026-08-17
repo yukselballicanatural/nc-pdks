@@ -25,7 +25,7 @@ import {
 import { supabaseServer } from "../db/supabaseServer";
 import type { CorrectionLookup, LeaveLookup, StartEndLookup } from "../engine/summary";
 import { NO_LEAVE } from "../engine/summary";
-import { leaveLookupOf, loadLeavesData } from "../kolay/loadLeaves";
+import { leaveLookupOf, loadLeavesData, type IzinGunBilgi } from "../kolay/loadLeaves";
 import { getSession, type SessionPayload } from "../auth/session";
 import { cachedByKey } from "./periodCache";
 
@@ -92,6 +92,8 @@ export interface PdksData {
   leaveLookup: LeaveLookup;
   /** İzin verisi gerçekten yüklendi mi? Arayüzde uyarı göstermek için. */
   izinVerisiVar: boolean;
+  /** sicil -> gün -> izin türü/ücret bilgisi (Günlük Detay etiketleri için). */
+  izinGunBilgi: Map<string, Map<string, IzinGunBilgi>>;
   geceTl: string[];
   session: SessionPayload | null;
   /** TL modundaysa sadece bu TL'nin kişileri; admin'de null. */
@@ -174,6 +176,7 @@ async function buildPdksData(
     isGece,
     leaveLookup: izinler.kullanilabilir ? leaveLookupOf(izinler) : NO_LEAVE,
     izinVerisiVar: izinler.kullanilabilir,
+    izinGunBilgi: izinler.gunBilgi,
     geceTl,
     session,
     tlFilter,
