@@ -1,5 +1,4 @@
 import { loadPdksData, visiblePeople } from "@/lib/data/loadPdks";
-import { loadTrackerData } from "@/lib/data/loadTracker";
 import { getEffectiveMola, getNet } from "@/lib/engine/summary";
 import { addDays, formatGs, formatHm } from "@/lib/engine/mesaiGunu";
 import { shiftKey } from "@/lib/engine/calcShifts";
@@ -22,10 +21,7 @@ export default async function MolaDetayiPage({
 }) {
   const sp = await searchParams;
   const data = await loadPdksData(sp);
-  const { range, shifts, corLookup, isGece, otherReadersByKey } = data;
-
-  // Tracker verisi olmasa da sayfa tam çalışır; yalnızca "neden" kolonu boş kalır.
-  const tracker = await loadTrackerData(range);
+  const { range, shifts, corLookup, isGece, otherReadersByKey, tracker, trackerKredi } = data;
 
   const rows: MolaRow[] = [];
   for (const p of visiblePeople(data)) {
@@ -58,8 +54,16 @@ export default async function MolaDetayiPage({
         .map(([etiket, dk]) => ({ etiket, dk }))
         .sort((x, y) => y.dk - x.dk);
 
+      // Bu ekranda üç ayrı sayı gösteriliyor, üçü de farklı soruyu yanıtlıyor:
+      //   turnikeDisi  : fiziksel gerçek — turnike dışında geçen tüm süre
+      //   krediDk      : bunun çalışma sayılan kısmı (Klinik + Toplantı)
+      //   molaSayilan  : eksik saat hesabına mola olarak giren kısım
+      // Kredi hesaba girdiği için getEffectiveMola KREDİLİ çağrıldığında
+      // doğrudan "mola sayılan" değeri veriyor.
+      const turnikeDisi = getEffectiveMola(p.sicil, gs, shifts, corLookup);
+      const molaSayilan = getEffectiveMola(p.sicil, gs, shifts, corLookup, trackerKredi);
+      const krediDk = Math.max(0, turnikeDisi - molaSayilan);
       const aciklananDk = nedenOzet.reduce((t, a) => t + a.dk, 0);
-      const molaDk = getEffectiveMola(p.sicil, gs, shifts, corLookup);
 
       rows.push({
         key: `${p.sicil}-${gs}`,
@@ -68,8 +72,10 @@ export default async function MolaDetayiPage({
         unvan: p.unvan || "Bilinmiyor",
         tarih: gs,
         vardiya: gece ? "Gece" : "Gündüz",
-        net: getNet(p.sicil, gs, shifts, corLookup),
-        mola: molaDk,
+        net: getNet(p.sicil, gs, shifts, corLookup, trackerKredi),
+        mola: turnikeDisi,
+        molaSayilan,
+        krediDk,
         toplam: sh.brut,
         calismaAraliklari: sh.pairs.map(([a, b]) => aralikMetni(a, b)),
         molaAraliklari,
@@ -77,7 +83,7 @@ export default async function MolaDetayiPage({
         digerDakika: sh.otherMin,
         nedenOzet,
         aciklananDk,
-        aciklanmayanDk: Math.max(0, molaDk - aciklananDk),
+        aciklanmayanDk: Math.max(0, turnikeDisi - aciklananDk),
       });
     }
   }

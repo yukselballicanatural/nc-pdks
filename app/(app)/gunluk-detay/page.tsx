@@ -15,7 +15,8 @@ export default async function GunlukDetayPage({
 }) {
   const sp = await searchParams;
   const data = await loadPdksData(sp);
-  const { range, shifts, corLookup, isGece, session, izinGunBilgi, izinVerisiVar } = data;
+  const { range, shifts, corLookup, isGece, session, izinGunBilgi, izinVerisiVar, trackerKredi } =
+    data;
 
   const rows: DetayRow[] = [];
   for (const p of visiblePeople(data)) {
@@ -30,7 +31,7 @@ export default async function GunlukDetayPage({
       const izin = izinler?.get(gs) ?? null;
       const sh = shifts.get(shiftKey(p.sicil, gs));
       const cor = corLookup.get(p.sicil, gs);
-      const net = getNet(p.sicil, gs, shifts, corLookup);
+      const net = getNet(p.sicil, gs, shifts, corLookup, trackerKredi);
 
       rows.push({
         key: `${p.sicil}-${gs}`,
@@ -43,7 +44,11 @@ export default async function GunlukDetayPage({
         cikis: sh ? formatGsHms(sh.c) : null,
         vardiya: gece ? "Gece" : "Gündüz",
         net,
-        mola: sh ? getEffectiveMola(p.sicil, gs, shifts, corLookup) : cor ? (gece ? N_MOLA : G_MOLA) : 0,
+        mola: sh
+          ? getEffectiveMola(p.sicil, gs, shifts, corLookup, trackerKredi)
+          : cor
+            ? (gece ? N_MOLA : G_MOLA)
+            : 0,
         brut: sh ? sh.brut : cor ? net + (gece ? N_MOLA : G_MOLA) : 0,
         netFark: net > 0 ? net - std : 0,
         kayit: sh ? sh.cnt : null,

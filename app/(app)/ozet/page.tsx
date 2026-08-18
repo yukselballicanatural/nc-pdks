@@ -13,12 +13,31 @@ export default async function OzetPage({
 }) {
   const sp = await searchParams;
   const data = await loadPdksData(sp);
-  const { range, shifts, corLookup, startEndLookup, isGece, turnikeCountByS, leaveLookup, izinVerisiVar } =
-    data;
+  const {
+    range,
+    shifts,
+    corLookup,
+    startEndLookup,
+    isGece,
+    turnikeCountByS,
+    leaveLookup,
+    izinVerisiVar,
+    trackerKredi,
+  } = data;
 
   const rows: OzetRow[] = visiblePeople(data).map((p) => {
     const gece = isGece(p.sicil);
-    const s = summary(p.sicil, range.sd, range.ed, shifts, corLookup, startEndLookup, gece, leaveLookup);
+    const s = summary(
+      p.sicil,
+      range.sd,
+      range.ed,
+      shifts,
+      corLookup,
+      startEndLookup,
+      gece,
+      leaveLookup,
+      trackerKredi
+    );
     const missing = getMissingDays(
       p.sicil,
       range.sd,
@@ -26,7 +45,8 @@ export default async function OzetPage({
       shifts,
       corLookup,
       startEndLookup,
-      leaveLookup
+      leaveLookup,
+      trackerKredi
     );
     return {
       sicil: p.sicil,

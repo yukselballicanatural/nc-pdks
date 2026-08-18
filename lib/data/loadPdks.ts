@@ -23,8 +23,16 @@ import {
   type PersonInfo,
 } from "../db/queries/materialized";
 import { supabaseServer } from "../db/supabaseServer";
-import type { CorrectionLookup, LeaveLookup, StartEndLookup } from "../engine/summary";
-import { NO_LEAVE } from "../engine/summary";
+import type {
+  CorrectionLookup,
+  LeaveLookup,
+  StartEndLookup,
+  WorkCreditLookup,
+} from "../engine/summary";
+import { NO_CREDIT, NO_LEAVE } from "../engine/summary";
+import { loadTrackerData, type TrackerData } from "./loadTracker";
+import { calismaKredisiDk } from "../tracker/araliklar";
+import { shiftKey } from "../engine/calcShifts";
 import { leaveLookupOf, loadLeavesData, type IzinGunBilgi } from "../kolay/loadLeaves";
 import { getSession, type SessionPayload } from "../auth/session";
 import { cachedByKey } from "./periodCache";
@@ -95,6 +103,16 @@ export interface PdksData {
   izinVerisiVar: boolean;
   /** sicil -> gün -> izin türü/ücret bilgisi (Günlük Detay etiketleri için). */
   izinGunBilgi: Map<string, Map<string, IzinGunBilgi>>;
+  /**
+   * Mola bildirimleri (time_tracker_events) — turnike dışı sürenin nerede
+   * geçtiği. Mola Detayı ekranı bunu aralık bazında gösteriyor.
+   */
+  tracker: TrackerData;
+  /**
+   * Klinik/Toplantı süresinin çalışma kredisi. TÜM sayfalar bunu kullanmalı —
+   * biri kullanıp biri kullanmazsa Özet ile Günlük Detay farklı net gösterir.
+   */
+  trackerKredi: WorkCreditLookup;
   geceTl: string[];
   session: SessionPayload | null;
   /** TL modundaysa sadece bu TL'nin kişileri; admin'de null. */
@@ -132,6 +150,7 @@ async function buildPdksData(
     { rows: corrections, lookup: corLookup },
     geceTl,
     izinler,
+    tracker,
   ] = await Promise.all([
     fetchShifts(range.sdParam, range.edParam),
     fetchAlarms(range.sdParam, range.edParam),
@@ -143,6 +162,8 @@ async function buildPdksData(
     // Kolay İK erişilemezse loadLeavesData hata fırlatmaz; kullanilabilir=false
     // döner ve aşağıda boş sorguya düşülür.
     loadLeavesData(range.sdParam, range.edParam),
+    // Mola bildirimleri; tablo yoksa/boşsa kullanilabilir=false döner.
+    loadTrackerData(range),
   ]);
 
   // Vardiya bilgisi henüz Supabase'de yok (kullanıcı kararı: şimdilik herkes gündüz).
@@ -160,6 +181,27 @@ async function buildPdksData(
 
   // start_date/end_date bilgisi henüz yok — dönem sınırı olduğu gibi kullanılır.
   const startEndLookup: StartEndLookup = { getStartDate: () => null, getEndDate: () => null };
+
+  // KLİNİK/TOPLANTI ÇALIŞMA KREDİSİ (kullanıcı kararı 2026-08-18).
+  //
+  // Gün başına bir kez, vardiyanın turnike DIŞI aralıklarıyla çakışma üzerinden
+  // hesaplanıyor. Burada hesaplanmasının sebebi: tek kaynak olsun ve her sayfa
+  // aynı rakamı görsün. Vardiyası olmayan güne kredi düşmez (dış aralık yok),
+  // bu yüzden turnikeden hiç geçmeyen birine çalışma yazılması imkânsız.
+  const krediByKey = new Map<string, number>();
+  if (tracker.kullanilabilir) {
+    for (const [key, sh] of shifts) {
+      const sicil = key.split("::")[0];
+      const aralar = tracker.bySicil.get(sicil);
+      if (!aralar || aralar.length === 0) continue;
+      const dk = calismaKredisiDk(sh.outsideIntervals, aralar);
+      if (dk > 0) krediByKey.set(key, dk);
+    }
+  }
+  const trackerKredi: WorkCreditLookup =
+    krediByKey.size === 0
+      ? NO_CREDIT
+      : { krediDk: (sicil, gs) => krediByKey.get(shiftKey(sicil, gs)) ?? 0 };
 
   return {
     range,
@@ -181,6 +223,8 @@ async function buildPdksData(
     leaveLookup: izinler.kullanilabilir ? leaveLookupOf(izinler) : NO_LEAVE,
     izinVerisiVar: izinler.kullanilabilir,
     izinGunBilgi: izinler.gunBilgi,
+    tracker,
+    trackerKredi,
     geceTl,
     session,
     tlFilter,

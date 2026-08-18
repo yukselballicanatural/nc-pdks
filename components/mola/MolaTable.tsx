@@ -27,6 +27,10 @@ export interface MolaRow {
   net: number;
   mola: number;
   toplam: number;
+  /** Turnike dışı sürenin eksik saat hesabına MOLA olarak giren kısmı. */
+  molaSayilan: number;
+  /** Klinik + Toplantı olarak ÇALIŞMA sayılan dakika. */
+  krediDk: number;
   calismaAraliklari: string[];
   molaAraliklari: MolaAralik[];
   digerOkuyucular: string[];
@@ -156,6 +160,32 @@ export default function MolaTable({
       sortValue: (r) => r.mola,
     },
     {
+      key: "kredi",
+      header: "Çalışma Sayıldı",
+      align: "right",
+      cell: (r) =>
+        r.krediDk > 0 ? (
+          <span style={{ color: "var(--cl-ok)" }}>{dkp(r.krediDk)}</span>
+        ) : (
+          <span style={{ color: "var(--tx-disabled)" }}>-</span>
+        ),
+      sortValue: (r) => r.krediDk,
+    },
+    {
+      key: "molaSayilan",
+      header: "Mola Sayıldı",
+      align: "right",
+      cell: (r) => (
+        <span
+          className={r.molaSayilan > 120 ? "font-semibold" : ""}
+          style={{ color: r.molaSayilan > 120 ? "var(--cl-warn)" : "var(--tx-secondary)" }}
+        >
+          {dkp(r.molaSayilan)}
+        </span>
+      ),
+      sortValue: (r) => r.molaSayilan,
+    },
+    {
       key: "neden",
       header: "Nerede Geçti",
       cell: (r) =>
@@ -275,9 +305,12 @@ export default function MolaTable({
         </div>
       )}
 
-      <p className="mb-3 text-xs" style={{ color: "var(--tx-muted)" }}>
-        ☕ Turnike dışı geçen süre = brüt - net. Satıra tıkla = o günün tüm çalışma/mola
-        aralıkları ve her aralığın nerede geçtiği. 2 saati aşan molalar sarı gösterilir.
+      <p className="mb-3 text-xs leading-relaxed" style={{ color: "var(--tx-muted)" }}>
+        ☕ <strong style={{ color: "var(--tx-secondary)" }}>Turnike Dışı</strong>: binadan
+        çıkılan tüm süre. <strong style={{ color: "var(--cl-ok)" }}>Çalışma Sayıldı</strong>:
+        bunun Klinik + Toplantı olarak bildirilen kısmı — eksik saat hesabında çalışma sayılır.{" "}
+        <strong style={{ color: "var(--cl-warn)" }}>Mola Sayıldı</strong>: eksik saat hesabına
+        mola olarak giren kısım. Satıra tıkla = o günün tüm aralıkları ve nerede geçtiği.
       </p>
       <DataTable
         rows={filtered}
@@ -328,6 +361,18 @@ export default function MolaTable({
             <div className="mb-5 text-sm" style={{ color: "var(--tx-secondary)" }}>
               {detay.tarih} · {detay.vardiya} · Turnike içi {dkp(detay.net)} / dışı{" "}
               {dkp(detay.mola)}
+              {detay.krediDk > 0 && (
+                <>
+                  {" · "}
+                  <span style={{ color: "var(--cl-ok)" }}>
+                    {dkp(detay.krediDk)} çalışma sayıldı
+                  </span>
+                  {" · "}
+                  <span style={{ color: "var(--cl-warn)" }}>
+                    {dkp(detay.molaSayilan)} mola sayıldı
+                  </span>
+                </>
+              )}
             </div>
 
             {/* Günün neden özeti */}

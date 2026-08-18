@@ -44,16 +44,42 @@ export const NO_LEAVE: LeaveLookup = {
   ucretsizIzinli: () => false,
 };
 
+/**
+ * Turnike dışında geçmiş ama ÇALIŞMA sayılan dakika (time_tracker_events).
+ *
+ * KULLANICI KARARI (2026-08-18): çalışanın uygulamadan bildirdiği "Klinik" ve
+ * "Toplantı" süreleri net çalışmaya eklenir; "Mola" ve "Yemek" mola olarak kalır.
+ * Gerekçe: kişi işi için klinikte/toplantıdaysa eksik saatle cezalandırılmamalı.
+ *
+ * Kredi yalnızca turnike DIŞI aralıklarla çakışan kısmı kapsar (bkz.
+ * lib/tracker/araliklar.ts → calismaKredisiDk); turnike içindeki süre zaten
+ * sayıldığı için iki kez eklenmesi imkânsız.
+ *
+ * Lookup verilmezse hesap eskisiyle birebir aynı kalır.
+ */
+export interface WorkCreditLookup {
+  /** O gün turnike dışında geçmiş ama çalışma sayılacak dakika. */
+  krediDk(sicil: string, gs: string): number;
+}
+
+/** Tracker verisi olmadığında kullanılan boş sorgu. */
+export const NO_CREDIT: WorkCreditLookup = { krediDk: () => 0 };
+
 export function getNet(
   sicil: string,
   gs: string,
   shifts: Map<string, ShiftResult>,
-  cor: CorrectionLookup
+  cor: CorrectionLookup,
+  kredi: WorkCreditLookup = NO_CREDIT
 ): number {
   const c = cor.get(sicil, gs);
+  // Elle düzeltme yöneticinin son sözü: üzerine tracker kredisi eklemek onun
+  // girdiği değeri bozar, bu yüzden düzeltme varsa kredi uygulanmaz.
   if (c) return c.yeni ?? 0;
   const sh = shifts.get(shiftKey(sicil, gs));
-  return sh ? sh.net : 0;
+  if (!sh) return 0;
+  // Brütü aşamaz: aksi hâlde mola (= brüt - net) negatife düşerdi.
+  return Math.min(sh.brut, sh.net + kredi.krediDk(sicil, gs));
 }
 
 /**
@@ -64,11 +90,14 @@ export function getEffectiveMola(
   sicil: string,
   gs: string,
   shifts: Map<string, ShiftResult>,
-  cor: CorrectionLookup
+  cor: CorrectionLookup,
+  kredi: WorkCreditLookup = NO_CREDIT
 ): number {
   const sh = shifts.get(shiftKey(sicil, gs));
   if (!sh) return 0;
-  return Math.max(0, sh.brut - getNet(sicil, gs, shifts, cor));
+  // Kredi verilirse net artar, dolayısıyla mola aynı miktarda azalır: klinik/
+  // toplantı süresi "mola" hanesinden "çalışma" hanesine geçer.
+  return Math.max(0, sh.brut - getNet(sicil, gs, shifts, cor, kredi));
 }
 
 /** Dönem içindeki etkili başlangıç = max(sd, start_date) */
@@ -91,7 +120,8 @@ export function summary(
   cor: CorrectionLookup,
   lookup: StartEndLookup,
   isGeceOf: boolean,
-  leave: LeaveLookup = NO_LEAVE
+  leave: LeaveLookup = NO_LEAVE,
+  kredi: WorkCreditLookup = NO_CREDIT
 ): SummaryResult {
   const gece = isGeceOf;
   const std = gece ? N_NET : G_NET;
@@ -110,13 +140,13 @@ export function summary(
 
   for (let d = effSd; d <= effEd; d = addDays(d, 1)) {
     const gs = formatGs(d);
-    const n = getNet(sicil, gs, shifts, cor);
+    const n = getNet(sicil, gs, shifts, cor, kredi);
     const sh = shifts.get(shiftKey(sicil, gs));
     if (n > 0) {
       net += n;
       cg += 1;
       if (sh) {
-        molaTotal += getEffectiveMola(sicil, gs, shifts, cor);
+        molaTotal += getEffectiveMola(sicil, gs, shifts, cor, kredi);
         otherTotal += sh.otherMin;
         total += sh.brut;
       } else {
@@ -186,7 +216,8 @@ export function getMissingDays(
   shifts: Map<string, ShiftResult>,
   cor: CorrectionLookup,
   lookup: StartEndLookup,
-  leave: LeaveLookup = NO_LEAVE
+  leave: LeaveLookup = NO_LEAVE,
+  kredi: WorkCreditLookup = NO_CREDIT
 ): MissingDay[] {
   const effSd = dateOnly(getEffectiveStart(sicil, sd, lookup));
   const effEd = dateOnly(getEffectiveEnd(sicil, ed, lookup));
@@ -194,7 +225,7 @@ export function getMissingDays(
   for (let d = effSd; d <= effEd; d = addDays(d, 1)) {
     if (isWeekday(d)) {
       const gs = formatGs(d);
-      const n = getNet(sicil, gs, shifts, cor);
+      const n = getNet(sicil, gs, shifts, cor, kredi);
       if (n === 0) {
         const izin = leave.ucretliIzinli(sicil, gs)
           ? ("ucretli" as const)

@@ -170,3 +170,39 @@ export function araligiAcikla(
 }
 
 export { dakika as trackerDakika };
+
+/**
+ * ÇALIŞMA sayılan ara türleri.
+ *
+ * KULLANICI KARARI (2026-08-18): "Klinik" ve "Toplantı" net çalışmaya eklenir;
+ * "Mola" ve "Yemek" mola olarak kalır. Gerekçe: kişi işi için klinikte veya
+ * toplantıdaysa eksik saatle cezalandırılmamalı.
+ *
+ * Kodlar kaynaktaki hâliyle tutuluyor (bkz. ARA_ETIKETLERI); yeni bir tür
+ * eklenirse burada AÇIKÇA listelenmediği sürece mola sayılır — sessizce
+ * çalışmaya eklenip eksik saati azaltmasındansa mola sayılması güvenli taraf.
+ */
+export const CALISMA_SAYILAN_ARA_KODLARI: ReadonlySet<string> = new Set(["clinic", "meeting"]);
+
+/**
+ * Bir günün turnike dışı aralıklarında çalışma sayılan toplam dakika.
+ *
+ * Yalnızca turnike DIŞI aralıklarla çakışan kısım sayılır; turnike içinde geçen
+ * süre vardiya hesabında zaten var, iki kez eklenmesi bu yüzden imkânsız.
+ *
+ * @param disAraliklar Vardiyanın turnike dışı aralıkları (ShiftResult.outsideIntervals)
+ * @param aralar Kişinin tracker aralıkları
+ */
+export function calismaKredisiDk(
+  disAraliklar: [Date, Date][],
+  aralar: TrackerAralik[]
+): number {
+  let toplam = 0;
+  for (const [bas, bit] of disAraliklar) {
+    for (const a of aralar) {
+      if (!a.kod || !CALISMA_SAYILAN_ARA_KODLARI.has(a.kod)) continue;
+      toplam += cakismaDk(bas, bit, a.bas, a.bit);
+    }
+  }
+  return toplam;
+}

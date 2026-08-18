@@ -2,7 +2,6 @@ import { loadPdksData, visiblePeople } from "@/lib/data/loadPdks";
 import { summary } from "@/lib/engine/summary";
 import { getNet } from "@/lib/engine/summary";
 import { addDays, formatGs, gunAdi, isWeekday } from "@/lib/engine/mesaiGunu";
-import { shiftKey } from "@/lib/engine/calcShifts";
 import PageHeader from "@/components/ui/PageHeader";
 import StatCard from "@/components/ui/StatCard";
 import {
@@ -24,8 +23,18 @@ export default async function DashboardPage({
 }) {
   const sp = await searchParams;
   const data = await loadPdksData(sp);
-  const { range, shifts, corLookup, startEndLookup, isGece, alarmCounts, buddyTotal, turnikeCountByS, leaveLookup } =
-    data;
+  const {
+    range,
+    shifts,
+    corLookup,
+    startEndLookup,
+    isGece,
+    alarmCounts,
+    buddyTotal,
+    turnikeCountByS,
+    leaveLookup,
+    trackerKredi,
+  } = data;
   const allPeople = visiblePeople(data);
 
   // Turnike kaydı olmayanlar (teknik/depo/klinik personeli) turnike bazlı hesaba
@@ -50,7 +59,8 @@ export default async function DashboardPage({
       corLookup,
       startEndLookup,
       isGece(p.sicil),
-      leaveLookup
+      leaveLookup,
+      trackerKredi
     );
     totalNet += s.net;
     if (s.eksik > 0) totalEksik += s.eksik;
@@ -74,7 +84,7 @@ export default async function DashboardPage({
     let dayMin = 0;
     let kisi = 0;
     for (const sicil of sicils) {
-      const net = getNet(sicil, gs, shifts, corLookup);
+      const net = getNet(sicil, gs, shifts, corLookup, trackerKredi);
       if (net > 0) {
         dayMin += net;
         kisi++;
