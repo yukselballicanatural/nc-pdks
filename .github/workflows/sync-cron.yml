@@ -17,6 +17,23 @@ jobs:
     steps:
       - name: /api/cron'u tetikle
         run: |
-          curl -sf -X GET \
+          # -f yerine kodu elle kontrol ediyoruz: -f bir hata durumunda gövdeyi
+          # sessizce atıyor, "exit code 22" dışında hiçbir teşhis vermiyordu.
+          # --max-time 60: tam yeniden hesaplama devam ederken bir tur 30-40 sn
+          # sürebiliyor (canlıda ölçüldü); daha kısa bir sınır burada yanlış
+          # yere "başarısız" gösterirdi.
+          http_code=$(curl -s --max-time 60 -o response.json -w "%{http_code}" \
             -H "x-sync-secret: ${{ secrets.SYNC_SECRET }}" \
-            https://nc-pdks.vercel.app/api/cron
+            https://nc-pdks.vercel.app/api/cron)
+          echo "HTTP $http_code"
+          echo "--- yanıt ---"
+          cat response.json
+          echo
+          if [ "$http_code" != "200" ]; then
+            if [ "$http_code" = "401" ]; then
+              echo "::error::401 Yetkisiz — SYNC_SECRET reposu ayarlarındaki (Settings > Secrets and variables > Actions) değerle Vercel'deki değer uyuşmuyor. Secrets and variables > Actions sayfasından SYNC_SECRET'i kontrol edin."
+            else
+              echo "::error::Beklenmeyen HTTP $http_code — yukarıdaki yanıt gövdesine bakın."
+            fi
+            exit 1
+          fi
