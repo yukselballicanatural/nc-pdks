@@ -177,7 +177,7 @@ export default function SyncPanel({
         hesaplayıp üstüne ekliyor. Kolay İK personel ve izin bilgisi de kendiliğinden
         tazeleniyor. Üç tetikleyici var: <span style={{ color: "var(--tx-primary)" }}>sayfa
         açıkken 20 saniyede bir çalışan canlı kontrol</span> (sağ altta &quot;Canlı&quot;
-        göstergesi), zamanlanmış görev (dakikada bir) ve sayfa açılışlarının ardından çalışan
+        göstergesi), zamanlanmış görev (günde bir, Vercel Hobby planı sınırı) ve sayfa açılışlarının ardından çalışan
         arka plan kontrolü. Eşzamanlı çalışmayı veritabanı kilidi engelliyor. Veri değiştiğinde
         ekran kendiliğinden tazelenir — sayfayı yenilemeniz gerekmez.
         {health.kolayTabloHazir && (

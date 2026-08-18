@@ -2,8 +2,9 @@
 
 // Canlı veri döngüsü — sayfa açık kaldıkça kendini güncel tutar.
 //
-// NEDEN: cron en iyi durumda dakikada bir çalışıyor ve `after()` yanıttan sonra
-// koştuğu için baktığınız ekran senkronizasyondan bir adım geride kalıyordu.
+// NEDEN: Vercel Hobby planında cron günde bir kez, saat garantisi olmadan
+// çalışıyor — bu yüzden "anlık" davranışın gerçek kaynağı BU bileşen. Sayfa
+// açıkken düzenli kontrol edip veri değiştiyse kendini tazeliyor.
 // Burası düzenli aralıkla /api/tick'i çağırır; veri sürümü değiştiyse
 // router.refresh() ile sunucu bileşenlerini yeniden çizdirir.
 //

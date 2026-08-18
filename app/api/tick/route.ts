@@ -1,8 +1,10 @@
 // Canlı nabız — açık duran sayfanın kendini güncel tutması için.
 //
-// NEDEN GEREKLİ: cron en sık dakikada bir çalışabiliyor ve `after()` yanıt
-// gönderildikten SONRA koştuğu için baktığınız ekran her zaman senkronizasyondan
-// bir adım geride kalıyordu. Bu uç noktayı tarayıcı düzenli aralıkla çağırıyor
+// NEDEN GEREKLİ: Vercel Hobby planında cron günde bir kez ve saat garantisi
+// olmadan çalışıyor (bkz. vercel.json) — asıl anlık güncelleme yükü BU uç
+// noktaya ve `after()`'a düşüyor. Cron yalnızca kimse sayfayı açık tutmazsa
+// (gece boyunca) sabah ilk kişi girene kadar arada kalan boşluğu dolduran
+// bir yedek. Bu uç noktayı tarayıcı düzenli aralıkla çağırıyor
 // (bkz. components/nav/LiveSync.tsx): yeni turnike kaydı varsa hemen işleniyor ve
 // istemci arayüzü tazeliyor. Böylece "anlık" davranış cron aralığına ve Vercel
 // planına bağlı olmaktan çıkıyor.
