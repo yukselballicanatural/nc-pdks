@@ -15,13 +15,12 @@ export default async function GunlukDetayPage({
 }) {
   const sp = await searchParams;
   const data = await loadPdksData(sp);
-  const { range, shifts, corLookup, isGece, session, izinGunBilgi } = data;
+  const { range, shifts, corLookup, isGece, session, izinGunBilgi, izinVerisiVar } = data;
 
   const rows: DetayRow[] = [];
   for (const p of visiblePeople(data)) {
     const gece = isGece(p.sicil);
     const std = gece ? N_NET : G_NET;
-    const totalStd = std + (gece ? N_MOLA : G_MOLA);
     const adSoyad = `${p.ad} ${p.soyad}`.trim() || p.sicil;
 
     const izinler = izinGunBilgi.get(p.sicil);
@@ -65,7 +64,11 @@ export default async function GunlukDetayPage({
         range={range}
       />
       <div className="p-6">
-        <DetayTable rows={rows} canEdit={session?.role === "admin"} />
+        <DetayTable
+          rows={rows}
+          canEdit={session?.role === "admin"}
+          izinVerisiVar={izinVerisiVar}
+        />
       </div>
     </>
   );

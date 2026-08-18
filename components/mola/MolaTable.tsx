@@ -4,6 +4,19 @@ import { useMemo, useState } from "react";
 import DataTable, { type Column } from "@/components/ui/DataTable";
 import { dkp } from "@/lib/format";
 
+/** Bir turnike dışı aralığın tracker'a göre nasıl geçtiği. */
+export interface AralikAciklamasi {
+  etiket: string;
+  dk: number;
+}
+
+export interface MolaAralik {
+  metin: string;
+  dk: number;
+  /** Boşsa tracker o saatler için bir şey söylemiyor. */
+  aciklama: AralikAciklamasi[];
+}
+
 export interface MolaRow {
   key: string;
   sicil: string;
@@ -15,18 +28,74 @@ export interface MolaRow {
   mola: number;
   toplam: number;
   calismaAraliklari: string[];
-  molaAraliklari: string[];
+  molaAraliklari: MolaAralik[];
   digerOkuyucular: string[];
   digerDakika: number;
+  /** Günün tamamı için tür bazında toplam (Klinik 40dk, Yemek 30dk …). */
+  nedenOzet: AralikAciklamasi[];
+  aciklananDk: number;
+  aciklanmayanDk: number;
 }
 
-export default function MolaTable({ rows }: { rows: MolaRow[] }) {
+export interface TrackerDurum {
+  kullanilabilir: boolean;
+  hata: string | null;
+  olaySayisi: number;
+  eslesmeyenOlay: number;
+  eslesmeyenAdlar: string[];
+  kapanmamis: number;
+  kisiSayisi: number;
+}
+
+/** Tür bazlı renkler — Klinik/Toplantı işle ilgili, Mola/Yemek kişisel. */
+const ETIKET_RENK: Record<string, string> = {
+  Klinik: "#38bdf8",
+  Toplantı: "#a78bfa",
+  Mola: "#fbbf24",
+  Yemek: "#34d399",
+};
+
+function etiketRengi(e: string): string {
+  return ETIKET_RENK[e] ?? "#94a3b8";
+}
+
+function Rozet({ etiket, dk }: AralikAciklamasi) {
+  const renk = etiketRengi(etiket);
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium"
+      style={{ background: `${renk}1f`, border: `1px solid ${renk}44`, color: renk }}
+    >
+      {etiket}
+      <span className="tabular-nums opacity-80">{dkp(dk)}</span>
+    </span>
+  );
+}
+
+export default function MolaTable({
+  rows,
+  tracker,
+}: {
+  rows: MolaRow[];
+  tracker: TrackerDurum;
+}) {
   const [tl, setTl] = useState("");
   const [esik, setEsik] = useState("");
+  const [neden, setNeden] = useState("");
   const [detay, setDetay] = useState<MolaRow | null>(null);
 
   const tlList = useMemo(
     () => [...new Set(rows.map((r) => r.unvan).filter(Boolean))].sort((a, b) => a.localeCompare(b, "tr")),
+    [rows]
+  );
+
+  // Filtre seçenekleri veriden üretiliyor — yeni bir ara türü eklenirse
+  // kendiliğinden listeye girer.
+  const nedenList = useMemo(
+    () =>
+      [...new Set(rows.flatMap((r) => r.nedenOzet.map((n) => n.etiket)))].sort((a, b) =>
+        a.localeCompare(b, "tr")
+      ),
     [rows]
   );
 
@@ -36,9 +105,14 @@ export default function MolaTable({ rows }: { rows: MolaRow[] }) {
         if (tl && r.unvan !== tl) return false;
         if (esik === "2 saatten fazla" && r.mola <= 120) return false;
         if (esik === "3 saatten fazla" && r.mola <= 180) return false;
+        if (neden === "Açıklaması olan" && r.aciklananDk === 0) return false;
+        if (neden === "Açıklaması olmayan" && r.aciklananDk > 0) return false;
+        if (neden && !["Açıklaması olan", "Açıklaması olmayan"].includes(neden)) {
+          if (!r.nedenOzet.some((n) => n.etiket === neden)) return false;
+        }
         return true;
       }),
-    [rows, tl, esik]
+    [rows, tl, esik, neden]
   );
 
   const columns: Column<MolaRow>[] = [
@@ -82,6 +156,40 @@ export default function MolaTable({ rows }: { rows: MolaRow[] }) {
       sortValue: (r) => r.mola,
     },
     {
+      key: "neden",
+      header: "Nerede Geçti",
+      cell: (r) =>
+        r.nedenOzet.length > 0 ? (
+          <span className="flex flex-wrap gap-1">
+            {r.nedenOzet.slice(0, 3).map((n) => (
+              <Rozet key={n.etiket} {...n} />
+            ))}
+            {r.nedenOzet.length > 3 && (
+              <span className="text-[11px]" style={{ color: "var(--tx-muted)" }}>
+                +{r.nedenOzet.length - 3}
+              </span>
+            )}
+          </span>
+        ) : (
+          <span className="text-xs" style={{ color: "var(--tx-disabled)" }}>
+            {tracker.kullanilabilir ? "Bildirim yok" : "-"}
+          </span>
+        ),
+      sortValue: (r) => r.aciklananDk,
+    },
+    {
+      key: "aciklanmayan",
+      header: "Açıklanmayan",
+      align: "right",
+      cell: (r) =>
+        r.aciklanmayanDk > 0 && r.aciklananDk > 0 ? (
+          <span style={{ color: "var(--cl-warn)" }}>{dkp(r.aciklanmayanDk)}</span>
+        ) : (
+          <span style={{ color: "var(--tx-disabled)" }}>-</span>
+        ),
+      sortValue: (r) => r.aciklanmayanDk,
+    },
+    {
       key: "toplam",
       header: "Toplam",
       align: "right",
@@ -89,26 +197,14 @@ export default function MolaTable({ rows }: { rows: MolaRow[] }) {
       sortValue: (r) => r.toplam,
     },
     {
-      key: "diger",
-      header: "Diğer Okuyucu Süresi",
-      align: "right",
-      cell: (r) =>
-        r.digerDakika > 0 ? (
-          <span style={{ color: "var(--tx-secondary)" }}>{dkp(r.digerDakika)}</span>
-        ) : (
-          <span style={{ color: "var(--tx-disabled)" }}>-</span>
-        ),
-      sortValue: (r) => r.digerDakika,
-    },
-    {
       key: "ozet",
       header: "Dışarıda Kalınan Aralıklar",
       cell: (r) => (
         <span className="text-xs" style={{ color: "var(--tx-secondary)" }}>
-          {r.molaAraliklari.slice(0, 3).join(" · ") || "-"}
-          {r.molaAraliklari.length > 3 && (
+          {r.molaAraliklari.slice(0, 2).map((m) => m.metin).join(" · ") || "-"}
+          {r.molaAraliklari.length > 2 && (
             <span style={{ color: "var(--tx-muted)" }}>
-              {" "}+{r.molaAraliklari.length - 3} aralık
+              {" "}+{r.molaAraliklari.length - 2} aralık
             </span>
           )}
         </span>
@@ -118,19 +214,88 @@ export default function MolaTable({ rows }: { rows: MolaRow[] }) {
 
   return (
     <>
+      {/* Tracker durumu — veri yoksa/eksikse sessiz kalmıyoruz, çünkü boş bir
+          "Nerede Geçti" kolonu "mola yok" gibi okunabilir. */}
+      {tracker.hata ? (
+        <div
+          className="mb-3 rounded-xl p-3 text-xs leading-relaxed"
+          style={{
+            background: "rgba(248,113,113,0.1)",
+            border: "1px solid rgba(248,113,113,0.28)",
+            color: "var(--tx-secondary)",
+          }}
+        >
+          <strong style={{ color: "var(--cl-danger)" }}>Mola bildirimleri okunamadı:</strong>{" "}
+          {tracker.hata} — &quot;Nerede Geçti&quot; kolonu bu yüzden boş. Turnike süreleri
+          etkilenmedi.
+        </div>
+      ) : !tracker.kullanilabilir ? (
+        <div
+          className="mb-3 rounded-xl p-3 text-xs leading-relaxed"
+          style={{
+            background: "rgba(255,255,255,0.04)",
+            border: "1px solid rgba(255,255,255,0.1)",
+            color: "var(--tx-secondary)",
+          }}
+        >
+          Bu dönemde <strong style={{ color: "var(--tx-primary)" }}>mola bildirimi yok</strong>.
+          Çalışanlar uygulamadan mola/klinik/toplantı/yemek bildirdikçe turnike dışı sürelerin
+          nedeni bu ekranda kendiliğinden görünmeye başlar.
+        </div>
+      ) : (
+        <div
+          className="mb-3 rounded-xl p-3 text-xs leading-relaxed"
+          style={{
+            background: "rgba(6,214,160,0.07)",
+            border: "1px solid rgba(6,214,160,0.2)",
+            color: "var(--tx-secondary)",
+          }}
+        >
+          Dönemde <span style={{ color: "var(--tx-primary)" }}>{tracker.olaySayisi}</span> mola
+          bildirimi okundu, <span style={{ color: "var(--tx-primary)" }}>{tracker.kisiSayisi}</span>{" "}
+          kişiye bağlandı.
+          {tracker.eslesmeyenOlay > 0 && (
+            <>
+              {" "}
+              <span style={{ color: "var(--cl-warn)" }}>
+                {tracker.eslesmeyenOlay} bildirim bir kişiye bağlanamadı
+              </span>
+              {tracker.eslesmeyenAdlar.length > 0 && <> ({tracker.eslesmeyenAdlar.join(", ")})</>}.
+            </>
+          )}
+          {tracker.kapanmamis > 0 && (
+            <>
+              {" "}
+              <span style={{ color: "var(--cl-warn)" }}>
+                {tracker.kapanmamis} bildirim kapatılmamış
+              </span>{" "}
+              (mola başlatılmış ama bitirilmemiş) — süresi bilinmediği için hesaba katılmadı.
+            </>
+          )}
+        </div>
+      )}
+
       <p className="mb-3 text-xs" style={{ color: "var(--tx-muted)" }}>
-        ☕ Turnike dışı geçen süre = brüt - net. Satıra tıkla = o günün tüm çalışma/mola aralıkları.
-        2 saati aşan molalar sarı gösterilir.
+        ☕ Turnike dışı geçen süre = brüt - net. Satıra tıkla = o günün tüm çalışma/mola
+        aralıkları ve her aralığın nerede geçtiği. 2 saati aşan molalar sarı gösterilir.
       </p>
       <DataTable
         rows={filtered}
         columns={columns}
         rowKey={(r) => r.key}
-        searchText={(r) => `${r.sicil} ${r.adSoyad} ${r.tarih}`}
-        searchPlaceholder="Ad, soyad, sicil veya tarih ara..."
+        searchText={(r) =>
+          `${r.sicil} ${r.adSoyad} ${r.tarih} ${r.nedenOzet.map((n) => n.etiket).join(" ")}`
+        }
+        searchPlaceholder="Ad, soyad, sicil, tarih veya neden ara..."
         filters={[
           { label: "Tüm Ünvanlar", options: tlList, value: tl, onChange: setTl },
           { label: "Tüm Molalar", options: ["2 saatten fazla", "3 saatten fazla"], value: esik, onChange: setEsik },
+          {
+            label: "Tüm Nedenler",
+            options: [...nedenList, "Açıklaması olan", "Açıklaması olmayan"],
+            value: neden,
+            onChange: setNeden,
+          },
         ]}
         onRowClick={(r) => setDetay(r)}
         rowClass={(r) => (r.mola > 120 ? "bg-amber-950/15" : "")}
@@ -161,8 +326,29 @@ export default function MolaTable({ rows }: { rows: MolaRow[] }) {
               {detay.adSoyad}
             </div>
             <div className="mb-5 text-sm" style={{ color: "var(--tx-secondary)" }}>
-              {detay.tarih} · {detay.vardiya} · Turnike içi {dkp(detay.net)} / dışı {dkp(detay.mola)}
+              {detay.tarih} · {detay.vardiya} · Turnike içi {dkp(detay.net)} / dışı{" "}
+              {dkp(detay.mola)}
             </div>
+
+            {/* Günün neden özeti */}
+            {detay.nedenOzet.length > 0 && (
+              <>
+                <div className="mb-2 text-sm font-semibold" style={{ color: "var(--tx-primary)" }}>
+                  Turnike Dışı Süre Nerede Geçti
+                </div>
+                <div className="mb-1.5 flex flex-wrap gap-1.5">
+                  {detay.nedenOzet.map((n) => (
+                    <Rozet key={n.etiket} {...n} />
+                  ))}
+                </div>
+                {detay.aciklanmayanDk > 0 && (
+                  <div className="mb-5 text-xs" style={{ color: "var(--cl-warn)" }}>
+                    {dkp(detay.aciklanmayanDk)} için bildirim yok.
+                  </div>
+                )}
+                {detay.aciklanmayanDk === 0 && <div className="mb-5" />}
+              </>
+            )}
 
             {/* Çalışma aralıkları */}
             <div className="mb-2 text-sm font-semibold" style={{ color: "var(--cl-ok)" }}>
@@ -187,22 +373,35 @@ export default function MolaTable({ rows }: { rows: MolaRow[] }) {
               )}
             </ul>
 
-            {/* Mola aralıkları */}
+            {/* Mola aralıkları — her biri kendi açıklamasıyla */}
             <div className="mb-2 text-sm font-semibold" style={{ color: "var(--cl-warn)" }}>
               Turnike Dışında Kalınan Aralıklar ({detay.molaAraliklari.length})
             </div>
             <ul className="mb-5 space-y-1 text-sm">
-              {detay.molaAraliklari.map((a, i) => (
+              {detay.molaAraliklari.map((m, i) => (
                 <li
                   key={i}
-                  className="rounded-lg px-3 py-1.5 tabular-nums"
+                  className="rounded-lg px-3 py-1.5"
                   style={{
                     background: "rgba(251,191,36,0.06)",
                     border: "1px solid rgba(251,191,36,0.12)",
                     color: "var(--tx-primary)",
                   }}
                 >
-                  {a}
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="tabular-nums">{m.metin}</span>
+                    {m.aciklama.length > 0 ? (
+                      <span className="flex flex-wrap gap-1">
+                        {m.aciklama.map((a) => (
+                          <Rozet key={a.etiket} {...a} />
+                        ))}
+                      </span>
+                    ) : (
+                      <span className="text-[11px]" style={{ color: "var(--tx-muted)" }}>
+                        bildirim yok
+                      </span>
+                    )}
+                  </div>
                 </li>
               ))}
               {detay.molaAraliklari.length === 0 && (

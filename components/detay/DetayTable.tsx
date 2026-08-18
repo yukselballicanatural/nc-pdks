@@ -30,7 +30,20 @@ export interface DetayRow {
   hafta: boolean;
 }
 
-export default function DetayTable({ rows, canEdit }: { rows: DetayRow[]; canEdit: boolean }) {
+export default function DetayTable({
+  rows,
+  canEdit,
+  izinVerisiVar,
+}: {
+  rows: DetayRow[];
+  canEdit: boolean;
+  /**
+   * Kolay İK izin verisi gerçekten yüklendi mi? false ise "İzin" kolonu boş
+   * kalır ve izinli günler "hiç gelmemiş" gibi görünür — bu yüzden sessiz
+   * kalmıyoruz, üstte uyarı gösteriyoruz.
+   */
+  izinVerisiVar: boolean;
+}) {
   const [tl, setTl] = useState("");
   const [tip, setTip] = useState("");
   const [edit, setEdit] = useState<DetayRow | null>(null);
@@ -187,6 +200,21 @@ export default function DetayTable({ rows, canEdit }: { rows: DetayRow[]; canEdi
 
   return (
     <>
+      {!izinVerisiVar && (
+        <div
+          className="mb-3 rounded-xl p-3 text-xs leading-relaxed"
+          style={{
+            background: "rgba(251,191,36,0.1)",
+            border: "1px solid rgba(251,191,36,0.28)",
+            color: "var(--tx-secondary)",
+          }}
+        >
+          <strong style={{ color: "var(--cl-warn)" }}>İzin verisi yüklenemedi.</strong> Yıllık
+          izin, rapor ve ücretsiz izin bilgisi Kolay İK&apos;dan okunamadığı için &quot;İzin&quot;
+          kolonu boş; izinli kişiler bu tabloda <em>gelmemiş</em> gibi görünür ve eksik saat
+          hesabı da izinleri düşmez. Sebebini İzinler sayfasında görebilirsiniz.
+        </div>
+      )}
       <p className="mb-3 text-xs" style={{ color: "var(--tx-muted)" }}>
         💡 {canEdit ? "Satıra tıkla = o günü düzelt" : "Takım Lideri modunda düzeltme yapılamaz"} ·
         Sütun başlığına tıkla = sırala
