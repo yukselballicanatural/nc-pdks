@@ -28,6 +28,13 @@ export interface DetayRow {
   izinUcretli: boolean | null;
   hasData: boolean;
   hafta: boolean;
+  /**
+   * Klinik/Toplantı bildirimlerinin bu güne eklenen çalışma kredisi (dakika,
+   * tür bazında kırılım). Boşsa o gün için kredi uygulanmamış.
+   */
+  krediDetay: { etiket: string; dk: number }[];
+  /** krediDetay toplamı — ikonun görünüp görünmeyeceğine hızlı bakış için. */
+  krediDk: number;
 }
 
 export default function DetayTable({
@@ -47,6 +54,7 @@ export default function DetayTable({
   const [tl, setTl] = useState("");
   const [tip, setTip] = useState("");
   const [edit, setEdit] = useState<DetayRow | null>(null);
+  const [krediRow, setKrediRow] = useState<DetayRow | null>(null);
 
   const tlList = useMemo(
     () => [...new Set(rows.map((r) => r.unvan).filter(Boolean))].sort((a, b) => a.localeCompare(b, "tr")),
@@ -132,7 +140,32 @@ export default function DetayTable({
       key: "net",
       header: "Turnike İçi",
       align: "right",
-      cell: (r) => r.hasData ? dkp(r.net) : <span style={{ color: "var(--tx-disabled)" }}>-</span>,
+      cell: (r) =>
+        r.hasData ? (
+          <span className="inline-flex items-center justify-end gap-1.5">
+            {dkp(r.net)}
+            {r.krediDk > 0 && (
+              <button
+                type="button"
+                title={`${dkp(r.krediDk)} klinik/toplantı bildirimiyle çalışmaya eklendi — ayrıntı için tıkla`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setKrediRow(r);
+                }}
+                className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px] font-bold leading-none"
+                style={{
+                  background: "rgba(56,189,248,0.16)",
+                  border: "1px solid rgba(56,189,248,0.45)",
+                  color: "#38bdf8",
+                }}
+              >
+                !
+              </button>
+            )}
+          </span>
+        ) : (
+          <span style={{ color: "var(--tx-disabled)" }}>-</span>
+        ),
       sortValue: (r) => r.net,
     },
     {
@@ -246,8 +279,10 @@ export default function DetayTable({
         rowClass={(r) =>
           r.duzeltmeNeden
             ? "bg-amber-950/20"
-            : r.izinTuru && r.izinUcretli
-              ? "bg-emerald-950/10"
+            : r.izinTuru
+              ? r.izinUcretli
+                ? "bg-emerald-950/10"
+                : "bg-yellow-500/10"
               : !r.hasData && !r.hafta
                 ? "bg-red-950/10"
                 : ""
@@ -255,7 +290,66 @@ export default function DetayTable({
         pageSize={200}
       />
       {edit && <CorrectionModal row={edit} onClose={() => setEdit(null)} />}
+      {krediRow && <KrediPopup row={krediRow} onClose={() => setKrediRow(null)} />}
     </>
+  );
+}
+
+/** Klinik/Toplantı bildirimlerinin bir güne eklediği çalışma kredisinin dökümü. */
+function KrediPopup({ row, onClose }: { row: DetayRow; onClose: () => void }) {
+  return (
+    <div
+      className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
+      onClick={onClose}
+    >
+      <div
+        className="modal-panel glass-modal relative w-full max-w-sm p-5"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="text-sm font-semibold" style={{ color: "var(--tx-primary)" }}>
+          {row.adSoyad} · {row.tarih}
+        </div>
+        <div className="mb-4 mt-1 text-xs" style={{ color: "var(--tx-secondary)" }}>
+          Klinik/toplantı bildirimiyle çalışmaya eklenen süre — turnike dışında geçse de eksik
+          saat hesabında çalışma sayılır.
+        </div>
+        <ul className="mb-4 space-y-1.5 text-sm">
+          {row.krediDetay.map((k) => (
+            <li
+              key={k.etiket}
+              className="flex items-center justify-between rounded-lg px-3 py-1.5"
+              style={{
+                background: "rgba(56,189,248,0.08)",
+                border: "1px solid rgba(56,189,248,0.2)",
+                color: "var(--tx-primary)",
+              }}
+            >
+              <span>{k.etiket}</span>
+              <span className="tabular-nums font-medium">{dkp(k.dk)}</span>
+            </li>
+          ))}
+        </ul>
+        <div
+          className="mb-4 flex items-center justify-between rounded-lg px-3 py-1.5 text-sm font-semibold"
+          style={{ background: "rgba(56,189,248,0.14)", color: "#38bdf8" }}
+        >
+          <span>Toplam</span>
+          <span className="tabular-nums">{dkp(row.krediDk)}</span>
+        </div>
+        <button
+          onClick={onClose}
+          className="w-full rounded-xl py-2 text-sm transition-all duration-150"
+          style={{
+            background: "rgba(255,255,255,0.05)",
+            border: "1px solid rgba(255,255,255,0.1)",
+            color: "var(--tx-secondary)",
+          }}
+        >
+          Kapat
+        </button>
+      </div>
+    </div>
   );
 }
 

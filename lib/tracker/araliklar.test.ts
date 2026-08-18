@@ -1,6 +1,6 @@
 // Olay akışı -> aralık dönüşümü testleri.
 import { describe, expect, it } from "vitest";
-import { araligiAcikla, araEtiketi, cakismaDk, olaylardanAraliklar } from "./araliklar";
+import { araligiAcikla, araEtiketi, cakismaDk, gunKredisiDetay, olaylardanAraliklar } from "./araliklar";
 import { ISTANBUL_OFFSET_MS } from "../engine/tz";
 import type { TrackerEventRow } from "../db/queries/timeTracker";
 
@@ -169,5 +169,41 @@ describe("araligiAcikla", () => {
 
   it("açıklama yoksa boş liste döner", () => {
     expect(araligiAcikla(t(11), t(12), [])).toEqual([]);
+  });
+});
+
+describe("gunKredisiDetay", () => {
+  const t = (h: number, m = 0) => new Date(Date.UTC(2026, 7, 17, h, m));
+
+  it("Klinik + Toplantı kırılımını verir, Mola/Yemek dışarıda kalır", () => {
+    const dis: [Date, Date][] = [[t(11), t(13)]];
+    const aralar = [
+      { kod: "clinic", etiket: "Klinik", bas: t(11), bit: t(11, 20), bildirilenDk: null },
+      { kod: "meeting", etiket: "Toplantı", bas: t(11, 20), bit: t(11, 35), bildirilenDk: null },
+      { kod: "break", etiket: "Mola", bas: t(11, 35), bit: t(11, 45), bildirilenDk: null },
+      { kod: "launch", etiket: "Yemek", bas: t(12), bit: t(12, 30), bildirilenDk: null },
+    ];
+    expect(gunKredisiDetay(dis, aralar)).toEqual([
+      { etiket: "Klinik", dk: 20 },
+      { etiket: "Toplantı", dk: 15 },
+    ]);
+  });
+
+  it("kredi yoksa boş liste döner", () => {
+    const dis: [Date, Date][] = [[t(11), t(12)]];
+    const aralar = [{ kod: "break", etiket: "Mola", bas: t(11), bit: t(11, 30), bildirilenDk: null }];
+    expect(gunKredisiDetay(dis, aralar)).toEqual([]);
+  });
+
+  it("birden çok turnike dışı aralıktaki aynı tür toplanır", () => {
+    const dis: [Date, Date][] = [
+      [t(9), t(9, 20)],
+      [t(14), t(14, 30)],
+    ];
+    const aralar = [
+      { kod: "clinic", etiket: "Klinik", bas: t(9), bit: t(9, 20), bildirilenDk: null },
+      { kod: "clinic", etiket: "Klinik", bas: t(14), bit: t(14, 30), bildirilenDk: null },
+    ];
+    expect(gunKredisiDetay(dis, aralar)).toEqual([{ etiket: "Klinik", dk: 50 }]);
   });
 });

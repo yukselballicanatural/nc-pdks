@@ -206,3 +206,28 @@ export function calismaKredisiDk(
   }
   return toplam;
 }
+
+/**
+ * Bir günün ÇALIŞMA sayılan (Klinik/Toplantı) dakikalarının tür bazlı dökümü.
+ *
+ * calismaKredisiDk toplamı verir; bu fonksiyon Günlük Detay'daki bilgi ikonu
+ * için "Klinik 20dk, Toplantı 15dk" gibi kırılımı üretir. Mola/Yemek bilerek
+ * dışarıda tutuluyor — bu ikon yalnızca eksik saati azaltan süreyi açıklıyor.
+ */
+export function gunKredisiDetay(
+  disAraliklar: [Date, Date][],
+  aralar: TrackerAralik[]
+): AciklananAralik[] {
+  const filtreli = aralar.filter((a) => a.kod && CALISMA_SAYILAN_ARA_KODLARI.has(a.kod));
+  if (filtreli.length === 0) return [];
+
+  const toplam = new Map<string, number>();
+  for (const [bas, bit] of disAraliklar) {
+    for (const parca of araligiAcikla(bas, bit, filtreli)) {
+      toplam.set(parca.etiket, (toplam.get(parca.etiket) ?? 0) + parca.dk);
+    }
+  }
+  return [...toplam.entries()]
+    .map(([etiket, dk]) => ({ etiket, dk }))
+    .sort((a, b) => b.dk - a.dk);
+}

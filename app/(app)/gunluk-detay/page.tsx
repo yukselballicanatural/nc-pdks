@@ -2,6 +2,7 @@ import { loadPdksData, visiblePeople } from "@/lib/data/loadPdks";
 import { getEffectiveMola, getNet } from "@/lib/engine/summary";
 import { addDays, formatGs, formatGsHms, gunAdi, isWeekday } from "@/lib/engine/mesaiGunu";
 import { shiftKey } from "@/lib/engine/calcShifts";
+import { gunKredisiDetay } from "@/lib/tracker/araliklar";
 import { G_MOLA, G_NET, N_MOLA, N_NET } from "@/lib/engine/constants";
 import PageHeader from "@/components/ui/PageHeader";
 import DetayTable, { type DetayRow } from "@/components/detay/DetayTable";
@@ -15,7 +16,7 @@ export default async function GunlukDetayPage({
 }) {
   const sp = await searchParams;
   const data = await loadPdksData(sp);
-  const { range, shifts, corLookup, isGece, session, izinGunBilgi, izinVerisiVar, trackerKredi } =
+  const { range, shifts, corLookup, isGece, session, izinGunBilgi, izinVerisiVar, trackerKredi, tracker } =
     data;
 
   const rows: DetayRow[] = [];
@@ -25,6 +26,7 @@ export default async function GunlukDetayPage({
     const adSoyad = `${p.ad} ${p.soyad}`.trim() || p.sicil;
 
     const izinler = izinGunBilgi.get(p.sicil);
+    const aralar = tracker.bySicil.get(p.sicil) ?? [];
 
     for (let d = range.sd; d <= range.ed; d = addDays(d, 1)) {
       const gs = formatGs(d);
@@ -32,6 +34,8 @@ export default async function GunlukDetayPage({
       const sh = shifts.get(shiftKey(p.sicil, gs));
       const cor = corLookup.get(p.sicil, gs);
       const net = getNet(p.sicil, gs, shifts, corLookup, trackerKredi);
+      const krediDetay =
+        sh && aralar.length > 0 ? gunKredisiDetay(sh.outsideIntervals, aralar) : [];
 
       rows.push({
         key: `${p.sicil}-${gs}`,
@@ -55,6 +59,8 @@ export default async function GunlukDetayPage({
         duzeltmeNeden: cor ? String(cor.neden ?? "Düzeltme") : null,
         izinTuru: izin?.tur ?? null,
         izinUcretli: izin?.ucretli ?? null,
+        krediDetay,
+        krediDk: krediDetay.reduce((t, k) => t + k.dk, 0),
         hasData: Boolean(sh) || Boolean(cor),
         hafta: !isWeekday(d),
       });
