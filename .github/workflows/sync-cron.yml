@@ -1,0 +1,22 @@
+name: PDKS anlık senkronizasyon
+
+# Vercel Hobby planı cron'u günde bire sınırlıyor (bkz. vercel.json). Kimse
+# uygulamayı açık tutmadığında veri işlenmeden birikmesin diye bu ücretsiz
+# GitHub Actions döngüsü /api/cron'u sık aralıklarla çağırıyor. Uç nokta zaten
+# idempotent ve veritabanı kilitli (bkz. lib/sync/autoSync.ts) — yapılacak iş
+# yoksa iki küçük sorguyla saniyeler içinde çıkıyor, üst üste çağrılması
+# sorun oluşturmaz.
+on:
+  schedule:
+    - cron: "*/3 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: /api/cron'u tetikle
+        run: |
+          curl -sf -X GET \
+            -H "x-sync-secret: ${{ secrets.SYNC_SECRET }}" \
+            https://nc-pdks.vercel.app/api/cron
