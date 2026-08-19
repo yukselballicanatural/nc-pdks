@@ -9,7 +9,8 @@ function ol(
   saatUtc: string,
   eventType: string,
   breakId: string | null = null,
-  elapsedSeconds: number | null = null
+  elapsedSeconds: number | null = null,
+  mapLink: string | null = null
 ): TrackerEventRow {
   return {
     userId: "1",
@@ -21,6 +22,7 @@ function ol(
     breakName: breakId,
     occurredAt: `2026-08-17T${saatUtc}:00.000Z`,
     elapsedSeconds,
+    mapLink,
   };
 }
 
@@ -152,6 +154,21 @@ describe("olaylardanAraliklar", () => {
     expect(araEtiketi("dentist", "Dentist")).toBe("Dentist");
     expect(araEtiketi(null, null)).toBe("Ara");
   });
+
+  it("başlangıç ve bitiş konumu (map_link) aralığa doğru taşınır", () => {
+    const r = olaylardanAraliklar([
+      ol("08:00", "break_start", "clinic", null, "https://maps.example/a"),
+      ol("08:20", "break_stop", "clinic", null, "https://maps.example/b"),
+    ]);
+    expect(r.aralar[0].basKonum).toBe("https://maps.example/a");
+    expect(r.aralar[0].bitKonum).toBe("https://maps.example/b");
+  });
+
+  it("kapanmamış aralıkta bitKonum null kalır", () => {
+    const r = olaylardanAraliklar([ol("08:00", "break_start", "clinic", null, "https://maps.example/a")]);
+    expect(r.aralar[0].basKonum).toBe("https://maps.example/a");
+    expect(r.aralar[0].bitKonum).toBeNull();
+  });
 });
 
 describe("cakismaDk", () => {
@@ -183,16 +200,16 @@ describe("araligiAcikla", () => {
 
   it("kullanıcının örneği: 11:20-12:00 arası 40 dakikayı klinik olarak açıklar", () => {
     const aralar = [
-      { kod: "clinic", etiket: "Klinik", bas: t(11, 20), bit: t(12, 0), bildirilenDk: 40 },
+      { kod: "clinic", etiket: "Klinik", bas: t(11, 20), bit: t(12, 0), bildirilenDk: 40, basKonum: null, bitKonum: null },
     ];
     expect(araligiAcikla(t(11, 20), t(12, 0), aralar)).toEqual([{ etiket: "Klinik", dk: 40 }]);
   });
 
   it("aynı türden parçalar toplanır ve büyükten küçüğe sıralanır", () => {
     const aralar = [
-      { kod: "break", etiket: "Mola", bas: t(11, 0), bit: t(11, 10), bildirilenDk: null },
-      { kod: "clinic", etiket: "Klinik", bas: t(11, 15), bit: t(11, 45), bildirilenDk: null },
-      { kod: "break", etiket: "Mola", bas: t(11, 50), bit: t(11, 55), bildirilenDk: null },
+      { kod: "break", etiket: "Mola", bas: t(11, 0), bit: t(11, 10), bildirilenDk: null, basKonum: null, bitKonum: null },
+      { kod: "clinic", etiket: "Klinik", bas: t(11, 15), bit: t(11, 45), bildirilenDk: null, basKonum: null, bitKonum: null },
+      { kod: "break", etiket: "Mola", bas: t(11, 50), bit: t(11, 55), bildirilenDk: null, basKonum: null, bitKonum: null },
     ];
     expect(araligiAcikla(t(11), t(12), aralar)).toEqual([
       { etiket: "Klinik", dk: 30 },
@@ -211,10 +228,10 @@ describe("gunKredisiDetay", () => {
   it("Klinik + Toplantı kırılımını verir, Mola/Yemek dışarıda kalır", () => {
     const dis: [Date, Date][] = [[t(11), t(13)]];
     const aralar = [
-      { kod: "clinic", etiket: "Klinik", bas: t(11), bit: t(11, 20), bildirilenDk: null },
-      { kod: "meeting", etiket: "Toplantı", bas: t(11, 20), bit: t(11, 35), bildirilenDk: null },
-      { kod: "break", etiket: "Mola", bas: t(11, 35), bit: t(11, 45), bildirilenDk: null },
-      { kod: "launch", etiket: "Yemek", bas: t(12), bit: t(12, 30), bildirilenDk: null },
+      { kod: "clinic", etiket: "Klinik", bas: t(11), bit: t(11, 20), bildirilenDk: null, basKonum: null, bitKonum: null },
+      { kod: "meeting", etiket: "Toplantı", bas: t(11, 20), bit: t(11, 35), bildirilenDk: null, basKonum: null, bitKonum: null },
+      { kod: "break", etiket: "Mola", bas: t(11, 35), bit: t(11, 45), bildirilenDk: null, basKonum: null, bitKonum: null },
+      { kod: "launch", etiket: "Yemek", bas: t(12), bit: t(12, 30), bildirilenDk: null, basKonum: null, bitKonum: null },
     ];
     expect(gunKredisiDetay(dis, aralar)).toEqual([
       { etiket: "Klinik", dk: 20 },
@@ -224,7 +241,7 @@ describe("gunKredisiDetay", () => {
 
   it("kredi yoksa boş liste döner", () => {
     const dis: [Date, Date][] = [[t(11), t(12)]];
-    const aralar = [{ kod: "break", etiket: "Mola", bas: t(11), bit: t(11, 30), bildirilenDk: null }];
+    const aralar = [{ kod: "break", etiket: "Mola", bas: t(11), bit: t(11, 30), bildirilenDk: null, basKonum: null, bitKonum: null }];
     expect(gunKredisiDetay(dis, aralar)).toEqual([]);
   });
 
@@ -234,8 +251,8 @@ describe("gunKredisiDetay", () => {
       [t(14), t(14, 30)],
     ];
     const aralar = [
-      { kod: "clinic", etiket: "Klinik", bas: t(9), bit: t(9, 20), bildirilenDk: null },
-      { kod: "clinic", etiket: "Klinik", bas: t(14), bit: t(14, 30), bildirilenDk: null },
+      { kod: "clinic", etiket: "Klinik", bas: t(9), bit: t(9, 20), bildirilenDk: null, basKonum: null, bitKonum: null },
+      { kod: "clinic", etiket: "Klinik", bas: t(14), bit: t(14, 30), bildirilenDk: null, basKonum: null, bitKonum: null },
     ];
     expect(gunKredisiDetay(dis, aralar)).toEqual([{ etiket: "Klinik", dk: 50 }]);
   });

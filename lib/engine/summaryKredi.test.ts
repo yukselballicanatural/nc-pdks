@@ -58,6 +58,8 @@ const ara = (kod: string, bas: Date, bit: Date | null): TrackerAralik => ({
   bas,
   bit,
   bildirilenDk: null,
+  basKonum: null,
+  bitKonum: null,
 });
 
 describe("calismaKredisiDk — hangi türler çalışma sayılır", () => {

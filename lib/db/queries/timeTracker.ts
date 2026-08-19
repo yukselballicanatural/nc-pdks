@@ -33,6 +33,8 @@ export interface TrackerEventRow {
   occurredAt: string;
   /** break_stop / checkout üzerinde geçen süre — varsa daha güvenilir. */
   elapsedSeconds: number | null;
+  /** Tracker uygulamasının ürettiği hazır Google Maps linki — çoğu olayda dolu. */
+  mapLink: string | null;
 }
 
 interface DbRow {
@@ -45,6 +47,7 @@ interface DbRow {
   break_name: string | null;
   occurred_at: string | null;
   elapsed_seconds: number | null;
+  map_link: string | null;
 }
 
 const SAYFA = 1000;
@@ -71,7 +74,7 @@ export async function fetchTrackerEvents(
     const { data, error } = await sb
       .from("time_tracker_events")
       .select(
-        "user_id, user_name, employee_code, email, event_type, break_id, break_name, occurred_at, elapsed_seconds"
+        "user_id, user_name, employee_code, email, event_type, break_id, break_name, occurred_at, elapsed_seconds, map_link"
       )
       .gte("occurred_at", utcBas)
       .lte("occurred_at", utcBit)
@@ -96,6 +99,7 @@ export async function fetchTrackerEvents(
         breakName: r.break_name,
         occurredAt: r.occurred_at,
         elapsedSeconds: r.elapsed_seconds,
+        mapLink: r.map_link,
       });
     }
     if (rows.length < SAYFA) break;

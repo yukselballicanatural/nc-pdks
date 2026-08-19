@@ -133,6 +133,35 @@ export default function ZamanTakipTable({ rows }: { rows: TrackerLogRow[] }) {
       ),
       sortValue: (r) => r.eslesme ?? "",
     },
+    {
+      key: "konum",
+      header: "Konum",
+      align: "center",
+      cell: (r) =>
+        r.konumLink ? (
+          <a
+            href={r.konumLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium transition-colors"
+            style={{
+              background: "rgba(56,189,248,0.12)",
+              border: "1px solid rgba(56,189,248,0.32)",
+              color: "#38bdf8",
+            }}
+          >
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 1 1 18 0z" />
+              <circle cx="12" cy="10" r="3" />
+            </svg>
+            Konuma Git
+          </a>
+        ) : (
+          <span style={{ color: "var(--tx-disabled)" }}>-</span>
+        ),
+      sortValue: (r) => (r.konumLink ? 0 : 1),
+    },
   ];
 
   return (

@@ -39,6 +39,12 @@ export interface TrackerLogRow {
   /** null = açık oturum, süresi bilinmiyor. */
   sureDk: number | null;
   acik: boolean;
+  /**
+   * Google Maps linki — tracker uygulaması üretiyor. Başlangıç konumu tercih
+   * edilir (bir oturumun "nerede" sorusuna en yakın cevap o); yoksa bitiş
+   * konumuna düşülür. İkisi de yoksa null (konum izni verilmemiş olabilir).
+   */
+  konumLink: string | null;
 }
 
 export interface TrackerLogData {
@@ -81,6 +87,18 @@ function tarihSaat(d: Date): { tarih: string; saat: string } {
   return { tarih: formatGs(d), saat: formatHm(d) };
 }
 
+/**
+ * Tracker uygulamasının ürettiği map_link'i doğrular. Dış bir kaynaktan
+ * geldiği için (kullanıcı girdisi değil ama bizim kontrolümüzde olmayan bir
+ * sistem) yalnızca https:// ile başlayan bir link kabul edilir — aksi hâlde
+ * bir gün `javascript:` gibi bir değer gelip tıklanabilir hâle gelebilirdi.
+ */
+function guvenliKonumLinki(link: string | null): string | null {
+  if (!link) return null;
+  const t = link.trim();
+  return t.startsWith("https://") ? t : null;
+}
+
 function aralikSatirlari(
   kimlik: { sicil: string | null; adSoyad: string; unvan: string | null; eslesme: KimlikYolu | null },
   grupKey: string,
@@ -105,6 +123,7 @@ function aralikSatirlari(
       bitis,
       sureDk,
       acik: a.bit === null,
+      konumLink: guvenliKonumLinki(a.basKonum) ?? guvenliKonumLinki(a.bitKonum),
     });
   }
   return rows;
