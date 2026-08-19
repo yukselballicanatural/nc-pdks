@@ -135,6 +135,15 @@ function IconLeave() {
   );
 }
 
+function IconActivity() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <circle cx="12" cy="12" r="9"/>
+      <path d="M12 7v5l3.5 2"/>
+    </svg>
+  );
+}
+
 function IconTeams() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -149,7 +158,7 @@ export type NavIconKey =
   | "dashboard" | "ozet" | "gunluk-detay" | "mola-detayi"
   | "pdks-alarm" | "buddy-punch" | "log" | "duzeltmeler"
   | "kapi-ayarlari" | "personel" | "zoho-kullanicilar" | "senkronizasyon"
-  | "takimlar" | "izinler";
+  | "takimlar" | "izinler" | "zaman-takip";
 
 function NavIcon({ name }: { name: NavIconKey }) {
   switch (name) {
@@ -167,6 +176,7 @@ function NavIcon({ name }: { name: NavIconKey }) {
     case "senkronizasyon":   return <IconSync />;
     case "takimlar":         return <IconTeams />;
     case "izinler":          return <IconLeave />;
+    case "zaman-takip":      return <IconActivity />;
     default:                 return null;
   }
 }
@@ -183,6 +193,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/ozet",             label: "Özet",             icon: "ozet" },
   { href: "/gunluk-detay",     label: "Günlük Detay",     icon: "gunluk-detay" },
   { href: "/mola-detayi",      label: "Mola Detayı",      icon: "mola-detayi" },
+  { href: "/zaman-takip",      label: "Zaman Takip",      icon: "zaman-takip" },
   { href: "/pdks-alarm",       label: "PDKS Alarm",       icon: "pdks-alarm" },
   { href: "/buddy-punch",      label: "Buddy Punch",      icon: "buddy-punch" },
   { href: "/log",              label: "Geçiş Kayıtları",  icon: "log" },
