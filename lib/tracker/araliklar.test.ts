@@ -81,6 +81,18 @@ describe("olaylardanAraliklar", () => {
     expect(r.kapanmamis).toBe(2); // açık mola + açık mesai
   });
 
+  it("checkout aynı anda açık olan BİRDEN FAZLA türü de kapatır", () => {
+    const r = olaylardanAraliklar([
+      ol("08:00", "checkin"),
+      ol("08:10", "break_start", "clinic"),
+      ol("08:20", "break_start", "meeting"),
+      ol("08:30", "checkout"),
+    ]);
+    expect(r.aralar).toHaveLength(2);
+    expect(r.aralar.every((a) => a.bit !== null)).toBe(true);
+    expect(r.kapanmamis).toBe(0);
+  });
+
   it("checkout açık kalan molayı da kapatır", () => {
     const r = olaylardanAraliklar([
       ol("08:00", "checkin"),
@@ -91,14 +103,35 @@ describe("olaylardanAraliklar", () => {
     expect(r.kapanmamis).toBe(0);
   });
 
-  it("üst üste iki break_start: ilki açık kalır, ikincisi normal işler", () => {
+  it("farklı türde iki tane açık ara birbirini KESMEZ, ikisi bağımsız kapanır", () => {
+    // Gerçek hata (canlı veride yakalandı, 2026-08-19): Klinik açıkken Yemek
+    // başlıyor, Yemek kapanıyor, sonra Klinik'in GERÇEK kapanışı geliyor.
+    // Eski tek-slotlu tasarımda Yemek başladığında Klinik erken "kapanmamış"
+    // olarak kayda geçiyordu ve gerçek kapanışı artık eşleştirilemiyordu.
     const r = olaylardanAraliklar([
-      ol("08:00", "break_start", "break"),
+      ol("08:26", "break_start", "clinic"),
+      ol("08:27", "break_start", "launch"),
+      ol("08:28", "break_stop", "launch"),
+      ol("08:29", "break_stop", "clinic"),
+    ]);
+    const klinik = r.aralar.find((a) => a.etiket === "Klinik");
+    const yemek = r.aralar.find((a) => a.etiket === "Yemek");
+    expect(klinik?.bit).not.toBeNull();
+    expect(hm(klinik!.bit)).toBe("11:29");
+    expect(yemek?.bit).not.toBeNull();
+    expect(hm(yemek!.bit)).toBe("11:28");
+    expect(r.kapanmamis).toBe(0);
+  });
+
+  it("aynı türde üst üste iki break_start: ilki açık kalır (kapanmamış), ikincisi kapanır", () => {
+    const r = olaylardanAraliklar([
+      ol("08:00", "break_start", "clinic"),
       ol("08:30", "break_start", "clinic"),
       ol("09:00", "break_stop", "clinic"),
     ]);
     expect(r.aralar).toHaveLength(2);
     expect(r.aralar[0].bit).toBeNull();
+    expect(hm(r.aralar[0].bas)).toBe("11:00");
     expect(r.aralar[1].etiket).toBe("Klinik");
     expect(hm(r.aralar[1].bit)).toBe("12:00");
   });
