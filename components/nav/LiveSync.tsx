@@ -2,11 +2,13 @@
 
 // Canlı veri döngüsü — sayfa açık kaldıkça kendini güncel tutar.
 //
-// NEDEN: Vercel Hobby planında cron günde bir kez, saat garantisi olmadan
-// çalışıyor — bu yüzden "anlık" davranışın gerçek kaynağı BU bileşen. Sayfa
-// açıkken düzenli kontrol edip veri değiştiyse kendini tazeliyor.
-// Burası düzenli aralıkla /api/tick'i çağırır; veri sürümü değiştiyse
-// router.refresh() ile sunucu bileşenlerini yeniden çizdirir.
+// NEDEN: Verinin İŞLENMESİ Supabase'in pg_net trigger'ıyla anlık oluyor
+// (bkz. supabase/migrations/0008_realtime_webhook.sql) — ama işlenen veri
+// veritabanına yazıldıktan sonra, o an AÇIK olan bir tarayıcı sekmesinin bunu
+// GÖRMESİ gerekiyor. Bu bileşen o son adımı yapıyor: düzenli kontrol edip veri
+// değiştiyse kendini tazeliyor. Burası düzenli aralıkla /api/tick'i çağırır;
+// veri sürümü değiştiyse router.refresh() ile sunucu bileşenlerini yeniden
+// çizdirir.
 //
 // router.refresh() "yumuşak" yenilemedir: tablo filtreleri, arama kutusu gibi
 // istemci durumları korunur, yalnızca sunucudan gelen veri tazelenir. Sayfa

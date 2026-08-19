@@ -38,7 +38,7 @@ interface SyncStateRow {
 export const dataVersion = cache(async function dataVersion(): Promise<string> {
   const sb = supabaseServer();
   try {
-    const [stateRes, corRes] = await Promise.all([
+    const [stateRes, corRes, trackerRes] = await Promise.all([
       sb
         .from("pdks_sync_state")
         .select("last_source_id, last_sync_at, config_version")
@@ -49,10 +49,23 @@ export const dataVersion = cache(async function dataVersion(): Promise<string> {
         .select("ts", { count: "exact" })
         .order("ts", { ascending: false })
         .limit(1),
+      // time_tracker_events sync tablosuna hiç yazmıyor — Mola Detayı/Günlük
+      // Detay bunu her istekte CANLI okuyor (bkz. lib/data/loadTracker.ts).
+      // Ama dış katmandaki bu önbellek anahtarı bunu bilmiyordu: yeni bir
+      // klinik/toplantı kaydı geldiğinde last_source_id/last_sync_at
+      // değişmediği için damga aynı kalıyor ve 60 sn'lik TTL boyunca eski
+      // (kredisiz) sonuç sunulmaya devam ediyordu. En yeni kaydın sayısı +
+      // zaman damgası bunu da kapsıyor.
+      sb
+        .from("time_tracker_events")
+        .select("occurred_at", { count: "exact" })
+        .order("occurred_at", { ascending: false })
+        .limit(1),
     ]);
 
     const s = (stateRes.data ?? null) as unknown as SyncStateRow | null;
     const corRows = (corRes.data ?? []) as unknown as { ts: string | null }[];
+    const trackerRows = (trackerRes.data ?? []) as unknown as { occurred_at: string | null }[];
 
     return [
       s?.last_source_id ?? 0,
@@ -60,6 +73,8 @@ export const dataVersion = cache(async function dataVersion(): Promise<string> {
       s?.config_version ?? "",
       corRes.count ?? 0,
       corRows[0]?.ts ?? "",
+      trackerRes.count ?? 0,
+      trackerRows[0]?.occurred_at ?? "",
     ].join("~");
   } catch {
     return "?";

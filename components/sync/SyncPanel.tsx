@@ -173,13 +173,14 @@ export default function SyncPanel({
             ? "Otomatik çalışıyor — elle bir şey yapmanız gerekmiyor"
             : "Otomatik çalışma nasıl işler"}
         </div>
-        Yeni turnike kaydı geldiğinde sistem bunu kendisi görüp yalnızca etkilenen günleri
-        hesaplayıp üstüne ekliyor. Kolay İK personel ve izin bilgisi de kendiliğinden
-        tazeleniyor. Üç tetikleyici var: <span style={{ color: "var(--tx-primary)" }}>sayfa
-        açıkken 20 saniyede bir çalışan canlı kontrol</span> (sağ altta &quot;Canlı&quot;
-        göstergesi), zamanlanmış görev (günde bir, Vercel Hobby planı sınırı) ve sayfa açılışlarının ardından çalışan
-        arka plan kontrolü. Eşzamanlı çalışmayı veritabanı kilidi engelliyor. Veri değiştiğinde
-        ekran kendiliğinden tazelenir — sayfayı yenilemeniz gerekmez.
+        Yeni bir turnike geçişi veya mola/klinik/toplantı bildirimi Supabase&apos;e
+        yazıldığı anda <span style={{ color: "var(--tx-primary)" }}>Supabase&apos;in kendisi
+        haber verip</span> sistem etkilenen günü hesaplayıp üstüne ekliyor — bekleme yok.
+        Kolay İK personel ve izin bilgisi de kendiliğinden tazeleniyor. Sayfa açıkken sağ
+        alttaki &quot;Canlı&quot; göstergesi bunu 20 saniyede bir kontrol edip ekranı
+        kendiliğinden tazeler; ayrıca sayfa açılışlarının ardından ve günde bir (Vercel Hobby
+        planı sınırı) yedek bir kontrol daha çalışır. Eşzamanlı çalışmayı veritabanı kilidi
+        engelliyor.
         {health.kolayTabloHazir && (
           <>
             {" "}

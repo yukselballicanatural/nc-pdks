@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { autoSync } from "@/lib/sync/autoSync";
 
-// Zamanlanmış senkronizasyon. Vercel cron GET ile çağırır (bkz. vercel.json).
-// Parçalı çalıştığı için tek turda bitmeyen iş sonraki turda kaldığı yerden sürer.
+// Senkronizasyonun tetiklendiği tek uç nokta. Üç kaynaktan çağrılır (bkz.
+// lib/sync/autoSync.ts başlığı): Supabase pg_net trigger'ı (asıl yol — veri
+// geldiği anda), Vercel cron (günde bir, yedek), ve elle/test amaçlı
+// x-sync-secret ile. Parçalı çalıştığı için tek turda bitmeyen iş sonraki
+// turda kaldığı yerden sürer.
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 
@@ -10,7 +13,9 @@ export const dynamic = "force-dynamic";
  * Yetki, üç yoldan biriyle:
  *   1. CRON_SECRET tanımlıysa Vercel `Authorization: Bearer <secret>` başlığını
  *      kendisi ekler — en güvenli yol, kurulması önerilir.
- *   2. x-sync-secret başlığı (elle/dış tetikleme, yerel test).
+ *   2. x-sync-secret başlığı — Supabase'in pg_net trigger'ı (bkz.
+ *      supabase/migrations/0008_realtime_webhook.sql) ve elle/test amaçlı
+ *      çağrılar bunu kullanır.
  *   3. CRON_SECRET yoksa: Vercel'in kendi cron çağrıları
  *      (`user-agent: vercel-cron/...`). Böylece kullanıcı ek ortam değişkeni
  *      kurmadan da otomasyon çalışır.
@@ -19,12 +24,11 @@ export const dynamic = "force-dynamic";
  * tamamlıyor ve veritabanı kilidi + tazelik kontrolü sayesinde tekrar tekrar
  * çağrılması boşa iş yapmıyor. Yine de CRON_SECRET kurmak tercih edilir.
  *
- * DİKKAT — burada bir hata yapıldı ve otomasyon sessizce hiç çalışmadı: 3. yolun
- * koşulu önce `!cronSecret && !syncSecret` idi. Projede SYNC_SECRET (elle
- * tetikleme için) zaten tanımlı olduğundan bu koşul hep false kalıyor, Vercel'in
- * cron isteği hiçbir dala uymuyor ve her turda 401 dönüyordu. Koşul yalnızca
- * CRON_SECRET'e bakmalı: SYNC_SECRET'in varlığı Vercel cron'unu dışlamamalı.
- * Bu uç noktanın 401 dönmesi hiçbir yerde görünmediği için hata fark edilmedi.
+ * DİKKAT — burada bir hata yapılmıştı ve otomasyon sessizce hiç çalışmamıştı:
+ * 3. yolun koşulu önce `!cronSecret && !syncSecret` idi. SYNC_SECRET tanımlı
+ * olduğunda bu koşul hep false kalıyor, Vercel'in cron isteği hiçbir dala
+ * uymuyor ve her turda 401 dönüyordu. Koşul artık yalnızca CRON_SECRET'e
+ * bakıyor: SYNC_SECRET'in varlığı Vercel cron'unu dışlamıyor.
  */
 function authorized(req: Request): boolean {
   const cronSecret = process.env.CRON_SECRET;

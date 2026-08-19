@@ -1,18 +1,28 @@
 // Otomatik senkronizasyon.
 //
-// Kullanıcı kararı: hiçbir şey elle tetiklenmeyecek. Yeni turnike kaydı
-// geldiğinde sistem kendisi hesaplayıp üstüne eklemeli, Kolay İK personeli de
-// kendisi tazelemeli.
+// Kullanıcı kararı: hiçbir şey elle tetiklenmeyecek, veri geldiği anda
+// işlenmeli — polling/bekleme kabul edilmez.
 //
-// İKİ TETİKLEYİCİ, TEK MOTOR:
-//   1. Zamanlanmış görev — /api/cron (bkz. vercel.json). Asıl yol.
+// ÜÇ TETİKLEYİCİ, TEK MOTOR:
+//   1. Supabase pg_net trigger — turnike_gecisler veya time_tracker_events'e
+//      INSERT olduğu anda /api/cron'u çağırır (bkz.
+//      supabase/migrations/0008_realtime_webhook.sql). ASIL YOL: veri
+//      Supabase'e yazıldığı anda, hiçbir bekleme olmadan tetiklenir. Önceki
+//      tasarım (GitHub Actions'ın birkaç dakikada bir yoklaması) kaldırıldı —
+//      dış bir sisteme ve bekleme süresine gerek yoktu, Supabase'in kendisi
+//      haber verebiliyor.
 //   2. Sayfa isteği sonrası — Next `after()` ile, yanıtı bloke etmeden
-//      (bkz. app/(app)/layout.tsx). Cron'un çalışmadığı/gecikmiş olduğu
-//      durumlarda sistemin kendini toparlamasını sağlar.
+//      (bkz. app/(app)/layout.tsx). Webhook her nasılsa gecikirse/kaçırılırsa
+//      sistemin kendini toparlamasını sağlar.
+//   3. Zamanlanmış görev — /api/cron, günde bir (bkz. vercel.json; Vercel
+//      Hobby planı sınırı). Yalnızca 1 ve 2'nin hiç çalışmadığı, çok nadir bir
+//      durumun son çaresi.
 //
-// İkisi aynı anda denk gelebileceği için veritabanı üzerinden dağıtık kilit
+// Üçü aynı anda denk gelebileceği için veritabanı üzerinden dağıtık kilit
 // kullanılır (pdks_sync_state.auto_lock_at). Kilit olmadan aynı gün iki kez
-// hesaplanır ve biri diğerinin yazdığı satırları silebilir.
+// hesaplanır ve biri diğerinin yazdığı satırları silebilir. Kilit ayrıca
+// pg_net'in gönderdiği eşzamanlı/yığılmış isteklerin (örn. toplu import)
+// hepsinin aynı anda işlemeye kalkmasını da engelliyor.
 import "server-only";
 import { supabaseServer } from "../db/supabaseServer";
 import { invalidateAll } from "../data/periodCache";
