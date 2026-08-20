@@ -80,3 +80,65 @@ export function zorunluCumartesi(d: Date): boolean {
   );
   return hafta % 2 === 0;
 }
+
+/**
+ * TÜRKİYE RESMİ TATİLLERİ — YILLIK GÜNCELLEME GEREKİR.
+ *
+ * KULLANICI KARARI (2026-08-20): resmi tatillerde kimseden çalışma beklenmez,
+ * eksik saat yazmaz. Sabit tarihli millî bayramlar her yıl aynı; Ramazan/
+ * Kurban Bayramı Hicri takvime göre kaydığı için HER YIL elle eklenmesi
+ * gerekir — aksi hâlde yeni yılın bayram tarihleri "normal iş günü" gibi
+ * eksik saat üretir. 2026 tarihleri doğrulandı (2026-08-20, resmî tatil
+ * takvimi kaynakları). dd.MM.yyyy formatı formatGs ile aynı.
+ *
+ * Arefe günleri (yarım gün tatil) ayrı kümede — kullanıcı kararı: o günler
+ * TAM gün değil, YARIM gün beklenir (bkz. gunOrani).
+ */
+const RESMI_TATIL_TAM_GUN = new Set<string>([
+  "01.01.2026", // Yılbaşı
+  "20.03.2026",
+  "21.03.2026",
+  "22.03.2026", // Ramazan Bayramı
+  "23.04.2026", // Ulusal Egemenlik ve Çocuk Bayramı
+  "01.05.2026", // Emek ve Dayanışma Günü
+  "19.05.2026", // Atatürk'ü Anma, Gençlik ve Spor Bayramı
+  "27.05.2026",
+  "28.05.2026",
+  "29.05.2026",
+  "30.05.2026", // Kurban Bayramı
+  "15.07.2026", // Demokrasi ve Milli Birlik Günü
+  "30.08.2026", // Zafer Bayramı
+  "29.10.2026", // Cumhuriyet Bayramı
+]);
+
+const RESMI_TATIL_YARIM_GUN = new Set<string>([
+  "19.03.2026", // Ramazan Bayramı arefesi
+  "26.05.2026", // Kurban Bayramı arefesi
+]);
+
+/** Tam gün resmi tatil mi (bayram arefesi hariç)? */
+export function tamGunResmiTatil(d: Date): boolean {
+  return RESMI_TATIL_TAM_GUN.has(formatGs(d));
+}
+
+/** Bayram arefesi (yarım gün tatil) mi? */
+export function yarimGunResmiTatil(d: Date): boolean {
+  return RESMI_TATIL_YARIM_GUN.has(formatGs(d));
+}
+
+/**
+ * Bir günün "beklenen çalışma" oranı — tüm gün-bazlı kurallar (hafta içi,
+ * zorunlu Cumartesi, resmi tatil, bayram arefesi) buradan tek noktadan
+ * yönetilir; summary.ts ve Günlük Detay AYNI fonksiyonu kullanır ki ikisi
+ * asla birbirinden sapmasın.
+ *
+ * Öncelik sırası: resmi tatil HER ZAMAN 0'a ezer (bir bayram Cumartesi'ye
+ * denk gelse bile), sonra arefe 0.5, sonra hafta içi/zorunlu Cumartesi 1.
+ */
+export function gunOrani(d: Date, cumartesiZorunluKisiMi: boolean): 0 | 0.5 | 1 {
+  if (tamGunResmiTatil(d)) return 0;
+  if (yarimGunResmiTatil(d)) return 0.5;
+  if (isWeekday(d)) return 1;
+  if (cumartesiZorunluKisiMi && zorunluCumartesi(d)) return 1;
+  return 0;
+}

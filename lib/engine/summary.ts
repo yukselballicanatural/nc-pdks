@@ -2,7 +2,7 @@
 // (get_net, get_effective_mola, get_effective_start/end, summary, get_missing_days).
 // Birebir port.
 import { G_MOLA, G_NET, N_MOLA, N_NET } from "./constants";
-import { addDays, dateOnly, formatGs, isWeekday, zorunluCumartesi } from "./mesaiGunu";
+import { addDays, dateOnly, formatGs, gunOrani, isWeekday, zorunluCumartesi } from "./mesaiGunu";
 import type { ShiftResult, SummaryResult } from "./types";
 import { shiftKey } from "./calcShifts";
 
@@ -146,6 +146,8 @@ export function summary(
   let otherTotal = 0;
   let total = 0;
   let bg = 0;
+  let bekDkToplam = 0;
+  let bekBrutToplam = 0;
   let izinliGun = 0;
   let ucretsizIzinGun = 0;
 
@@ -166,11 +168,14 @@ export function summary(
       if (!isWeekday(d)) cpd += n;
     }
 
-    const gerekli = isWeekday(d) || (cumartesiZorunlu && zorunluCumartesi(d));
-    if (!gerekli) continue;
+    // Tüm gün-bazlı kurallar (hafta içi / zorunlu Cumartesi / resmi tatil /
+    // bayram arefesi) TEK bir yerden geliyor — bkz. gunOrani, mesaiGunu.ts.
+    // oran: 1 = tam gün beklenir, 0.5 = yarım gün (arefe), 0 = beklenmez.
+    const oran = gunOrani(d, cumartesiZorunlu);
+    if (oran === 0) continue;
 
-    // Hafta sonu (zorunlu Cumartesi hariç) gereken güne girmiyor, bu yüzden
-    // izin kontrolü yalnızca gerekli günler için anlamlı.
+    // Hafta sonu/tatil gereken güne girmiyor, bu yüzden izin kontrolü
+    // yalnızca gerekli (oran > 0) günler için anlamlı.
     if (n === 0 && leave.ucretliIzinli(sicil, gs)) {
       // Ücretli izinli ve gelmemiş: gereken günden düş — eksik yazmasın.
       // Geldiyse (n > 0) dokunmuyoruz; çalıştığı süre normal şekilde sayılır.
@@ -185,10 +190,12 @@ export function summary(
     }
 
     bg += 1;
+    bekDkToplam += std * oran;
+    bekBrutToplam += (std + (gece ? N_MOLA : G_MOLA)) * oran;
   }
 
-  const bek = bg * std;
-  const bekTotal = bg * (std + (gece ? N_MOLA : G_MOLA));
+  const bek = bekDkToplam;
+  const bekTotal = bekBrutToplam;
 
   return {
     gece,
@@ -221,6 +228,8 @@ export interface MissingDay {
   izin: "ucretli" | "ucretsiz" | null;
   /** Bu gün zorunlu (mandatory) bir Cumartesi mi? bkz. zorunluCumartesi. */
   zorunluCumartesi: boolean;
+  /** Beklenen çalışma oranı — 1 tam gün, 0.5 bayram arefesi. bkz. gunOrani. */
+  oran: 0.5 | 1;
 }
 
 export function getMissingDays(
@@ -238,8 +247,8 @@ export function getMissingDays(
   const effEd = dateOnly(getEffectiveEnd(sicil, ed, lookup));
   const missing: MissingDay[] = [];
   for (let d = effSd; d <= effEd; d = addDays(d, 1)) {
-    const zCumartesi = cumartesiZorunlu && zorunluCumartesi(d);
-    if (isWeekday(d) || zCumartesi) {
+    const oran = gunOrani(d, cumartesiZorunlu);
+    if (oran > 0) {
       const gs = formatGs(d);
       const n = getNet(sicil, gs, shifts, cor, kredi);
       if (n === 0) {
@@ -248,7 +257,14 @@ export function getMissingDays(
           : leave.ucretsizIzinli(sicil, gs)
             ? ("ucretsiz" as const)
             : null;
-        missing.push({ date: d, gs, cor: cor.get(sicil, gs), izin, zorunluCumartesi: zCumartesi });
+        missing.push({
+          date: d,
+          gs,
+          cor: cor.get(sicil, gs),
+          izin,
+          zorunluCumartesi: cumartesiZorunlu && zorunluCumartesi(d),
+          oran: oran as 0.5 | 1,
+        });
       }
     }
   }

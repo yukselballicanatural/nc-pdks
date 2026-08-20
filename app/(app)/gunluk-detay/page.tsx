@@ -1,9 +1,10 @@
 import { loadPdksData, visiblePeople } from "@/lib/data/loadPdks";
 import { getEffectiveMola, getNet } from "@/lib/engine/summary";
-import { addDays, formatGs, formatGsHms, formatHm, gunAdi, isWeekday } from "@/lib/engine/mesaiGunu";
+import { addDays, formatGs, formatGsHms, formatHm, gunAdi, gunOrani } from "@/lib/engine/mesaiGunu";
 import { guvenliKonumLinki } from "@/lib/tracker/araliklar";
 import { shiftKey } from "@/lib/engine/calcShifts";
 import { gunKredisiDetay, gunKronolojisi } from "@/lib/tracker/araliklar";
+import { cumartesiZorunluKisi } from "@/lib/db/queries/materialized";
 import { G_MOLA, G_NET, N_MOLA, N_NET } from "@/lib/engine/constants";
 import PageHeader from "@/components/ui/PageHeader";
 import DetayTable, { type DetayRow } from "@/components/detay/DetayTable";
@@ -28,9 +29,14 @@ export default async function GunlukDetayPage({
 
     const izinler = izinGunBilgi.get(p.sicil);
     const aralar = tracker.bySicil.get(p.sicil) ?? [];
+    const cumartesiUygun = cumartesiZorunluKisi(p);
 
     for (let d = range.sd; d <= range.ed; d = addDays(d, 1)) {
       const gs = formatGs(d);
+      // Tüm gün-bazlı kurallar (hafta içi / zorunlu Cumartesi / resmi tatil /
+      // bayram arefesi) TEK noktadan — bkz. gunOrani, mesaiGunu.ts. summary.ts
+      // AYNI fonksiyonu kullanıyor, ikisi asla birbirinden sapmaz.
+      const oran = gunOrani(d, cumartesiUygun);
       const izin = izinler?.get(gs) ?? null;
       const sh = shifts.get(shiftKey(p.sicil, gs));
       const cor = corLookup.get(p.sicil, gs);
@@ -67,7 +73,11 @@ export default async function GunlukDetayPage({
         // Turnike kaydı yok ama tracker kredisiyle net>0 ise (bkz. hasData
         // yorumu) mola kavramı yok (0) — toplam = net, brüt de net'e eşit.
         brut: sh ? sh.brut : cor ? net + (gece ? N_MOLA : G_MOLA) : net,
-        netFark: net > 0 ? net - std : 0,
+        // KULLANICI KARARI (2026-08-20): hafta sonu/tatilde ne kadar
+        // çalışılırsa çalışılsın eksik saat yazmaz — o gün beklenen (oran=0)
+        // ise fark = net'in tamamı (hep pozitif katkı), oran>0 ise normal
+        // fark = net - o günün beklenen süresi (yarım gün ise std/2).
+        netFark: net > 0 ? (oran > 0 ? net - std * oran : net) : 0,
         kayit: sh ? sh.cnt : null,
         duzeltmeNeden: cor ? String(cor.neden ?? "Düzeltme") : null,
         izinTuru: izin?.tur ?? null,
@@ -79,7 +89,11 @@ export default async function GunlukDetayPage({
         // gerçekleşebilir (bkz. lib/tracker/araliklar.ts turnikesizGunlukKredi)
         // — o günü "kayıtsız" göstermemek için üçüncü koşul eklendi.
         hasData: Boolean(sh) || Boolean(cor) || net > 0,
-        hafta: !isWeekday(d),
+        // "hafta" alanı DataTable/DetayTable'da "bu gün gerekli değil" anlamında
+        // kullanılıyor (kırmızı kayıtsız rengini bastırır, gün adını sarı yapar)
+        // — artık sadece hafta sonu değil, resmi tatil/arefe/zorunlu-olmayan
+        // Cumartesi'yi de kapsıyor (oran===0), zorunlu Cumartesi'yi KAPSAMIYOR.
+        hafta: oran === 0,
       });
     }
   }
