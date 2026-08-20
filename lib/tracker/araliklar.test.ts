@@ -1,6 +1,14 @@
 // Olay akışı -> aralık dönüşümü testleri.
 import { describe, expect, it } from "vitest";
-import { araligiAcikla, araEtiketi, cakismaDk, gunKredisiDetay, olaylardanAraliklar } from "./araliklar";
+import {
+  araligiAcikla,
+  araEtiketi,
+  cakismaDk,
+  gunKredisiDetay,
+  gunKronolojisi,
+  olaylardanAraliklar,
+  type TrackerAralik,
+} from "./araliklar";
 import { ISTANBUL_OFFSET_MS } from "../engine/tz";
 import type { TrackerEventRow } from "../db/queries/timeTracker";
 
@@ -255,5 +263,55 @@ describe("gunKredisiDetay", () => {
       { kod: "clinic", etiket: "Klinik", bas: t(14), bit: t(14, 30), bildirilenDk: null, basKonum: null, bitKonum: null },
     ];
     expect(gunKredisiDetay(dis, aralar)).toEqual([{ etiket: "Klinik", dk: 50 }]);
+  });
+});
+
+describe("gunKronolojisi", () => {
+  const gun = (h: number, m = 0) => new Date(Date.UTC(2026, 7, 17, h, m));
+  const gunBas = gun(0);
+  const gunBit = gun(24);
+  const ara = (
+    etiket: string,
+    kod: string,
+    bas: Date,
+    bit: Date | null
+  ): TrackerAralik => ({ kod, etiket, bas, bit, bildirilenDk: null, basKonum: null, bitKonum: null });
+
+  it("gün içindeki olayları kronolojik sırayla döner, dakikayı hesaplar", () => {
+    const aralar = [
+      ara("Yemek", "launch", gun(12), gun(12, 30)),
+      ara("Klinik", "clinic", gun(11), gun(11, 40)),
+    ];
+    const r = gunKronolojisi(gunBas, gunBit, aralar);
+    expect(r.map((o) => o.etiket)).toEqual(["Klinik", "Yemek"]);
+    expect(r[0].dk).toBe(40);
+    expect(r[1].dk).toBe(30);
+  });
+
+  it("hâlâ açık (bit=null) olay dk=null ile listelenir", () => {
+    const r = gunKronolojisi(gunBas, gunBit, [ara("Klinik", "clinic", gun(11), null)]);
+    expect(r).toHaveLength(1);
+    expect(r[0].dk).toBeNull();
+  });
+
+  it("gün sınırı dışında tamamen kalan (önceki/sonraki gün) olay listelenmez", () => {
+    const oncekiGunTam = new Date(Date.UTC(2026, 7, 16, 22));
+    const sonrakiGun = new Date(Date.UTC(2026, 7, 18, 1));
+    const r = gunKronolojisi(gunBas, gunBit, [
+      ara("Mola", "break", oncekiGunTam, new Date(Date.UTC(2026, 7, 16, 23))),
+      ara("Yemek", "launch", sonrakiGun, null),
+    ]);
+    expect(r).toHaveLength(0);
+  });
+
+  it("önceki günde başlayıp bu güne taşan (gece yarısını aşan) olay bu günde de görünür", () => {
+    const oncekiGunBaslangic = new Date(Date.UTC(2026, 7, 16, 23));
+    const r = gunKronolojisi(gunBas, gunBit, [ara("Mola", "break", oncekiGunBaslangic, gun(0, 30))]);
+    expect(r).toHaveLength(1);
+    expect(r[0].dk).toBe(90);
+  });
+
+  it("boş aralık listesi boş sonuç verir", () => {
+    expect(gunKronolojisi(gunBas, gunBit, [])).toEqual([]);
   });
 });

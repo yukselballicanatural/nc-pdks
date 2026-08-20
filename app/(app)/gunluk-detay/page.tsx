@@ -1,8 +1,9 @@
 import { loadPdksData, visiblePeople } from "@/lib/data/loadPdks";
 import { getEffectiveMola, getNet } from "@/lib/engine/summary";
-import { addDays, formatGs, formatGsHms, gunAdi, isWeekday } from "@/lib/engine/mesaiGunu";
+import { addDays, formatGs, formatGsHms, formatHm, gunAdi, isWeekday } from "@/lib/engine/mesaiGunu";
+import { guvenliKonumLinki } from "@/lib/tracker/araliklar";
 import { shiftKey } from "@/lib/engine/calcShifts";
-import { gunKredisiDetay } from "@/lib/tracker/araliklar";
+import { gunKredisiDetay, gunKronolojisi } from "@/lib/tracker/araliklar";
 import { G_MOLA, G_NET, N_MOLA, N_NET } from "@/lib/engine/constants";
 import PageHeader from "@/components/ui/PageHeader";
 import DetayTable, { type DetayRow } from "@/components/detay/DetayTable";
@@ -36,6 +37,16 @@ export default async function GunlukDetayPage({
       const net = getNet(p.sicil, gs, shifts, corLookup, trackerKredi);
       const krediDetay =
         sh && aralar.length > 0 ? gunKredisiDetay(sh.outsideIntervals, aralar) : [];
+      const gunOlaylari =
+        aralar.length > 0
+          ? gunKronolojisi(d, addDays(d, 1), aralar).map((o) => ({
+              etiket: o.etiket,
+              bas: formatHm(o.bas),
+              bit: o.bit ? formatHm(o.bit) : null,
+              dk: o.dk,
+              konum: guvenliKonumLinki(o.basKonum) ?? guvenliKonumLinki(o.bitKonum),
+            }))
+          : [];
 
       rows.push({
         key: `${p.sicil}-${gs}`,
@@ -61,6 +72,7 @@ export default async function GunlukDetayPage({
         izinUcretli: izin?.ucretli ?? null,
         krediDetay,
         krediDk: krediDetay.reduce((t, k) => t + k.dk, 0),
+        gunOlaylari,
         hasData: Boolean(sh) || Boolean(cor),
         hafta: !isWeekday(d),
       });

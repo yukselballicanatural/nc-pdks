@@ -31,6 +31,12 @@ export interface DataTableProps<T> {
     onChange: (v: string) => void;
   }[];
   rowClass?: (row: T) => string;
+  /**
+   * Non-null dönerse satır sütun bazlı hücreler yerine tek bir
+   * `colSpan={columns.length}` hücresiyle render edilir — örn. bir günün
+   * tamamı izinliyken satırın ortasında büyük bir etiket göstermek için.
+   */
+  rowOverride?: (row: T) => React.ReactNode | null;
   onRowClick?: (row: T) => void;
   emptyText?: string;
   /** Büyük tablolarda ilk N satırı göster, "daha fazla" ile artır. */
@@ -95,6 +101,7 @@ export default function DataTable<T>({
   searchPlaceholder = "Ara...",
   filters,
   rowClass,
+  rowOverride,
   onRowClick,
   emptyText = "Kayıt bulunamadı.",
   pageSize = 300,
@@ -260,24 +267,34 @@ export default function DataTable<T>({
                     idx % 2 === 0 ? "rgba(255,255,255,0.013)" : "transparent";
                 }}
               >
-                {columns.map((c) => (
-                  <td
-                    key={c.key}
-                    className={`px-3 py-2 ${
-                      c.align === "right"
-                        ? "text-right tabular-nums"
-                        : c.align === "center"
-                          ? "text-center"
-                          : "text-left"
-                    }`}
-                    style={{
-                      color: "var(--tx-primary)",
-                      fontFeatureSettings: c.align === "right" ? '"tnum"' : undefined,
-                    }}
-                  >
-                    {c.cell(r)}
-                  </td>
-                ))}
+                {(() => {
+                  const override = rowOverride?.(r);
+                  if (override != null) {
+                    return (
+                      <td key="override" colSpan={columns.length} className="px-3 py-2">
+                        {override}
+                      </td>
+                    );
+                  }
+                  return columns.map((c) => (
+                    <td
+                      key={c.key}
+                      className={`px-3 py-2 ${
+                        c.align === "right"
+                          ? "text-right tabular-nums"
+                          : c.align === "center"
+                            ? "text-center"
+                            : "text-left"
+                      }`}
+                      style={{
+                        color: "var(--tx-primary)",
+                        fontFeatureSettings: c.align === "right" ? '"tnum"' : undefined,
+                      }}
+                    >
+                      {c.cell(r)}
+                    </td>
+                  ));
+                })()}
               </tr>
             ))}
             {visible.length === 0 && (

@@ -20,7 +20,7 @@ import {
   type KimlikYolu,
   type ZohoKimlik,
 } from "../tracker/kimlik";
-import { olaylardanAraliklar, type TrackerAralik } from "../tracker/araliklar";
+import { guvenliKonumLinki, olaylardanAraliklar, type TrackerAralik } from "../tracker/araliklar";
 import type { DateRange } from "./loadPdks";
 
 export interface TrackerLogRow {
@@ -85,18 +85,6 @@ function grupAnahtari(e: TrackerEventRow): string {
 
 function tarihSaat(d: Date): { tarih: string; saat: string } {
   return { tarih: formatGs(d), saat: formatHm(d) };
-}
-
-/**
- * Tracker uygulamasının ürettiği map_link'i doğrular. Dış bir kaynaktan
- * geldiği için (kullanıcı girdisi değil ama bizim kontrolümüzde olmayan bir
- * sistem) yalnızca https:// ile başlayan bir link kabul edilir — aksi hâlde
- * bir gün `javascript:` gibi bir değer gelip tıklanabilir hâle gelebilirdi.
- */
-function guvenliKonumLinki(link: string | null): string | null {
-  if (!link) return null;
-  const t = link.trim();
-  return t.startsWith("https://") ? t : null;
 }
 
 function aralikSatirlari(
