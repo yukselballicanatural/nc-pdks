@@ -141,9 +141,18 @@ describe("getNet / getEffectiveMola kredi ile", () => {
     expect(getEffectiveMola(S, gs, shifts, cor, k)).toBe(20); // 440 brüt - 420
   });
 
-  it("vardiyası olmayan güne kredi düşmez", () => {
+  it("kredisi olmayan farklı bir güne kredi sızmaz", () => {
     const k = krediOf("04.08.2026", 60);
-    expect(getNet(S, "04.08.2026", shifts, NO_COR, k)).toBe(0);
+    expect(getNet(S, "05.08.2026", shifts, NO_COR, k)).toBe(0);
+  });
+
+  it("KULLANICI KARARI (2026-08-20): turnike kaydı yoksa (vardiya yok) ama kredi varsa net = kredi", () => {
+    const k = krediOf("04.08.2026", 60);
+    expect(getNet(S, "04.08.2026", shifts, NO_COR, k)).toBe(60);
+  });
+
+  it("turnike kaydı yok ve kredi de yok (NO_CREDIT) → net 0, eski davranış korunur", () => {
+    expect(getNet(S, "04.08.2026", shifts, NO_COR)).toBe(0);
   });
 });
 

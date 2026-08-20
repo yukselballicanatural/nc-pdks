@@ -64,7 +64,9 @@ export default async function GunlukDetayPage({
           : cor
             ? (gece ? N_MOLA : G_MOLA)
             : 0,
-        brut: sh ? sh.brut : cor ? net + (gece ? N_MOLA : G_MOLA) : 0,
+        // Turnike kaydı yok ama tracker kredisiyle net>0 ise (bkz. hasData
+        // yorumu) mola kavramı yok (0) — toplam = net, brüt de net'e eşit.
+        brut: sh ? sh.brut : cor ? net + (gece ? N_MOLA : G_MOLA) : net,
         netFark: net > 0 ? net - std : 0,
         kayit: sh ? sh.cnt : null,
         duzeltmeNeden: cor ? String(cor.neden ?? "Düzeltme") : null,
@@ -73,7 +75,10 @@ export default async function GunlukDetayPage({
         krediDetay,
         krediDk: krediDetay.reduce((t, k) => t + k.dk, 0),
         gunOlaylari,
-        hasData: Boolean(sh) || Boolean(cor),
+        // net>0 turnike kaydı olmayan bir günde de klinik/toplantı kredisiyle
+        // gerçekleşebilir (bkz. lib/tracker/araliklar.ts turnikesizGunlukKredi)
+        // — o günü "kayıtsız" göstermemek için üçüncü koşul eklendi.
+        hasData: Boolean(sh) || Boolean(cor) || net > 0,
         hafta: !isWeekday(d),
       });
     }

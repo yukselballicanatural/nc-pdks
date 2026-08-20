@@ -58,3 +58,25 @@ export function isWeekday(d: Date): boolean {
   const day = d.getUTCDay(); // 0=Pazar, 6=Cumartesi
   return day !== 0 && day !== 6;
 }
+
+/**
+ * KULLANICI KARARI (2026-08-20): takım liderine bağlı satış personeli her 2
+ * Cumartesi'den birinde çalışmak zorunda. Şirkette hangi Cumartesi'nin
+ * "zorunlu" olduğuna dair somut bir referans tarih YOK (kullanıcı doğruladı,
+ * "bilmiyorum, genel kural yeterli" dedi) — bu yüzden parite (çift/tek hafta)
+ * aşağıdaki TEK sabite göre hesaplanıyor.
+ *
+ * KALİBRASYON UYARISI: gerçek roster'la çakışmayabilir. Yanlışsa SADECE bu
+ * satır değiştirilir, tüm hesap otomatik düzelir — başka hiçbir yeri
+ * değiştirmeye gerek yok.
+ */
+const ZORUNLU_CUMARTESI_REFERANS = Date.UTC(2026, 0, 3); // 3 Ocak 2026 Cumartesi = zorunlu kabul edildi
+
+/** Bu Cumartesi (takvime göre, herkes için aynı) zorunlu çalışma günü mü? */
+export function zorunluCumartesi(d: Date): boolean {
+  if (d.getUTCDay() !== 6) return false;
+  const hafta = Math.round(
+    (dateOnly(d).getTime() - ZORUNLU_CUMARTESI_REFERANS) / (7 * 24 * 60 * 60 * 1000)
+  );
+  return hafta % 2 === 0;
+}

@@ -1,5 +1,6 @@
 import { loadPdksData, visiblePeople } from "@/lib/data/loadPdks";
 import { summary, getMissingDays } from "@/lib/engine/summary";
+import { cumartesiZorunluKisi } from "@/lib/db/queries/materialized";
 import { gunAdi } from "@/lib/engine/mesaiGunu";
 import PageHeader from "@/components/ui/PageHeader";
 import OzetTable, { type OzetRow } from "@/components/ozet/OzetTable";
@@ -27,6 +28,7 @@ export default async function OzetPage({
 
   const rows: OzetRow[] = visiblePeople(data).map((p) => {
     const gece = isGece(p.sicil);
+    const cumartesiZorunlu = cumartesiZorunluKisi(p);
     const s = summary(
       p.sicil,
       range.sd,
@@ -36,7 +38,8 @@ export default async function OzetPage({
       startEndLookup,
       gece,
       leaveLookup,
-      trackerKredi
+      trackerKredi,
+      cumartesiZorunlu
     );
     const missing = getMissingDays(
       p.sicil,
@@ -46,7 +49,8 @@ export default async function OzetPage({
       corLookup,
       startEndLookup,
       leaveLookup,
-      trackerKredi
+      trackerKredi,
+      cumartesiZorunlu
     );
     return {
       sicil: p.sicil,

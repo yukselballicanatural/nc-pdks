@@ -2,7 +2,7 @@
 // (get_net, get_effective_mola, get_effective_start/end, summary, get_missing_days).
 // Birebir port.
 import { G_MOLA, G_NET, N_MOLA, N_NET } from "./constants";
-import { addDays, dateOnly, formatGs, isWeekday } from "./mesaiGunu";
+import { addDays, dateOnly, formatGs, isWeekday, zorunluCumartesi } from "./mesaiGunu";
 import type { ShiftResult, SummaryResult } from "./types";
 import { shiftKey } from "./calcShifts";
 
@@ -77,7 +77,11 @@ export function getNet(
   // girdiği değeri bozar, bu yüzden düzeltme varsa kredi uygulanmaz.
   if (c) return c.yeni ?? 0;
   const sh = shifts.get(shiftKey(sicil, gs));
-  if (!sh) return 0;
+  // KULLANICI KARARI (2026-08-20): turnike kaydı hiç olmasa da (sh yok) o gün
+  // klinik/toplantı bildirimi varsa bu süre net çalışmaya sayılır — "turnike
+  // dışında olsalar bile sistem eklemeli" talebi. kredi verilmezse (NO_CREDIT)
+  // krediDk hep 0 döner, davranış eskisiyle birebir aynı kalır.
+  if (!sh) return kredi.krediDk(sicil, gs);
   // Brütü aşamaz: aksi hâlde mola (= brüt - net) negatife düşerdi.
   return Math.min(sh.brut, sh.net + kredi.krediDk(sicil, gs));
 }
@@ -121,7 +125,14 @@ export function summary(
   lookup: StartEndLookup,
   isGeceOf: boolean,
   leave: LeaveLookup = NO_LEAVE,
-  kredi: WorkCreditLookup = NO_CREDIT
+  kredi: WorkCreditLookup = NO_CREDIT,
+  /**
+   * KULLANICI KARARI (2026-08-20): TL'ye bağlı satış personeli her 2
+   * Cumartesi'den birinde çalışmak zorunda (bkz. zorunluCumartesi,
+   * lib/engine/mesaiGunu.ts). Bu bayrak true ise zorunlu Cumartesi'ler de
+   * hafta içi gibi "gereken güne" girer — çalışılmazsa eksik sayılır.
+   */
+  cumartesiZorunlu = false
 ): SummaryResult {
   const gece = isGeceOf;
   const std = gece ? N_NET : G_NET;
@@ -155,10 +166,11 @@ export function summary(
       if (!isWeekday(d)) cpd += n;
     }
 
-    if (!isWeekday(d)) continue;
+    const gerekli = isWeekday(d) || (cumartesiZorunlu && zorunluCumartesi(d));
+    if (!gerekli) continue;
 
-    // Hafta sonu zaten gereken güne girmiyor, bu yüzden izin kontrolü yalnızca
-    // hafta içi için anlamlı.
+    // Hafta sonu (zorunlu Cumartesi hariç) gereken güne girmiyor, bu yüzden
+    // izin kontrolü yalnızca gerekli günler için anlamlı.
     if (n === 0 && leave.ucretliIzinli(sicil, gs)) {
       // Ücretli izinli ve gelmemiş: gereken günden düş — eksik yazmasın.
       // Geldiyse (n > 0) dokunmuyoruz; çalıştığı süre normal şekilde sayılır.
@@ -207,6 +219,8 @@ export interface MissingDay {
    * "ucretsiz" olanlar girer (bkz. summary).
    */
   izin: "ucretli" | "ucretsiz" | null;
+  /** Bu gün zorunlu (mandatory) bir Cumartesi mi? bkz. zorunluCumartesi. */
+  zorunluCumartesi: boolean;
 }
 
 export function getMissingDays(
@@ -217,13 +231,15 @@ export function getMissingDays(
   cor: CorrectionLookup,
   lookup: StartEndLookup,
   leave: LeaveLookup = NO_LEAVE,
-  kredi: WorkCreditLookup = NO_CREDIT
+  kredi: WorkCreditLookup = NO_CREDIT,
+  cumartesiZorunlu = false
 ): MissingDay[] {
   const effSd = dateOnly(getEffectiveStart(sicil, sd, lookup));
   const effEd = dateOnly(getEffectiveEnd(sicil, ed, lookup));
   const missing: MissingDay[] = [];
   for (let d = effSd; d <= effEd; d = addDays(d, 1)) {
-    if (isWeekday(d)) {
+    const zCumartesi = cumartesiZorunlu && zorunluCumartesi(d);
+    if (isWeekday(d) || zCumartesi) {
       const gs = formatGs(d);
       const n = getNet(sicil, gs, shifts, cor, kredi);
       if (n === 0) {
@@ -232,7 +248,7 @@ export function getMissingDays(
           : leave.ucretsizIzinli(sicil, gs)
             ? ("ucretsiz" as const)
             : null;
-        missing.push({ date: d, gs, cor: cor.get(sicil, gs), izin });
+        missing.push({ date: d, gs, cor: cor.get(sicil, gs), izin, zorunluCumartesi: zCumartesi });
       }
     }
   }

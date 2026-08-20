@@ -7,6 +7,7 @@ import {
   gunKredisiDetay,
   gunKronolojisi,
   olaylardanAraliklar,
+  turnikesizGunlukKredi,
   type TrackerAralik,
 } from "./araliklar";
 import { ISTANBUL_OFFSET_MS } from "../engine/tz";
@@ -313,5 +314,43 @@ describe("gunKronolojisi", () => {
 
   it("boş aralık listesi boş sonuç verir", () => {
     expect(gunKronolojisi(gunBas, gunBit, [])).toEqual([]);
+  });
+});
+
+describe("turnikesizGunlukKredi", () => {
+  const t = (gun: number, h: number, m = 0) => new Date(Date.UTC(2026, 7, gun, h, m));
+  const ara = (
+    etiket: string,
+    kod: string,
+    bas: Date,
+    bit: Date | null
+  ): TrackerAralik => ({ kod, etiket, bas, bit, bildirilenDk: null, basKonum: null, bitKonum: null });
+
+  it("turnike kaydı yokken klinik/toplantı süresi güne göre kredilendirilir", () => {
+    const aralar = [
+      ara("Klinik", "clinic", t(17, 11), t(17, 11, 40)),
+      ara("Mola", "break", t(17, 12), t(17, 12, 20)),
+    ];
+    const r = turnikesizGunlukKredi(aralar);
+    expect(r.get("17.08.2026")).toBe(40); // sadece klinik — mola dışarıda
+  });
+
+  it("farklı günlerdeki aralıklar ayrı ayrı kredilendirilir", () => {
+    const aralar = [
+      ara("Klinik", "clinic", t(17, 11), t(17, 11, 30)),
+      ara("Toplantı", "meeting", t(18, 9), t(18, 9, 15)),
+    ];
+    const r = turnikesizGunlukKredi(aralar);
+    expect(r.get("17.08.2026")).toBe(30);
+    expect(r.get("18.08.2026")).toBe(15);
+  });
+
+  it("sadece Mola/Yemek varsa kredi üretmez", () => {
+    const r = turnikesizGunlukKredi([ara("Yemek", "launch", t(17, 12), t(17, 12, 30))]);
+    expect(r.size).toBe(0);
+  });
+
+  it("boş liste boş Map verir", () => {
+    expect(turnikesizGunlukKredi([]).size).toBe(0);
   });
 });

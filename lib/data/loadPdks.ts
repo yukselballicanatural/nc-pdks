@@ -31,7 +31,7 @@ import type {
 } from "../engine/summary";
 import { NO_CREDIT, NO_LEAVE } from "../engine/summary";
 import { loadTrackerData, type TrackerData } from "./loadTracker";
-import { calismaKredisiDk } from "../tracker/araliklar";
+import { calismaKredisiDk, turnikesizGunlukKredi } from "../tracker/araliklar";
 import { shiftKey } from "../engine/calcShifts";
 import { leaveLookupOf, loadLeavesData, type IzinGunBilgi } from "../kolay/loadLeaves";
 import { getSession, type SessionPayload } from "../auth/session";
@@ -113,6 +113,13 @@ export interface PdksData {
    * biri kullanıp biri kullanmazsa Özet ile Günlük Detay farklı net gösterir.
    */
   trackerKredi: WorkCreditLookup;
+  /**
+   * Turnike kaydı OLMAYAN ama klinik/toplantı kredisiyle net>0 olan sicil::gs
+   * anahtarları (bkz. turnikesizGunlukKredi). visiblePeople bu kişileri de
+   * listeye eklemek için kullanır — aksi hâlde turnikesiz-ama-kredili biri
+   * hiçbir sayfada görünmez.
+   */
+  trackerOnlyKeys: Set<string>;
   geceTl: string[];
   session: SessionPayload | null;
   /** TL modundaysa sadece bu TL'nin kişileri; admin'de null. */
@@ -189,6 +196,7 @@ async function buildPdksData(
   // aynı rakamı görsün. Vardiyası olmayan güne kredi düşmez (dış aralık yok),
   // bu yüzden turnikeden hiç geçmeyen birine çalışma yazılması imkânsız.
   const krediByKey = new Map<string, number>();
+  const trackerOnlyKeys = new Set<string>();
   if (tracker.kullanilabilir) {
     for (const [key, sh] of shifts) {
       const sicil = key.split("::")[0];
@@ -196,6 +204,20 @@ async function buildPdksData(
       if (!aralar || aralar.length === 0) continue;
       const dk = calismaKredisiDk(sh.outsideIntervals, aralar);
       if (dk > 0) krediByKey.set(key, dk);
+    }
+
+    // KULLANICI KARARI (2026-08-20): turnike kaydı hiç olmayan bir günde de
+    // klinik/toplantı süresi net çalışmaya sayılır. Yalnızca o gün için
+    // ZATEN bir vardiya (turnike) YOKSA ekleniyor — turnikeli günde üstüne
+    // yazma yapılmaz, çift sayım imkânsız.
+    for (const [sicil, aralar] of tracker.bySicil) {
+      if (aralar.length === 0) continue;
+      for (const [gs, dk] of turnikesizGunlukKredi(aralar)) {
+        const key = shiftKey(sicil, gs);
+        if (shifts.has(key)) continue;
+        krediByKey.set(key, dk);
+        trackerOnlyKeys.add(key);
+      }
     }
   }
   const trackerKredi: WorkCreditLookup =
@@ -225,6 +247,7 @@ async function buildPdksData(
     izinGunBilgi: izinler.gunBilgi,
     tracker,
     trackerKredi,
+    trackerOnlyKeys,
     geceTl,
     session,
     tlFilter,
@@ -241,6 +264,7 @@ export function visiblePeople(data: PdksData): PersonInfo[] {
   const active = new Set<string>();
   for (const key of data.shifts.keys()) active.add(key.split("::")[0]);
   for (const c of data.corrections) active.add(c.sicil);
+  for (const key of data.trackerOnlyKeys) active.add(key.split("::")[0]);
 
   const all = [...data.personByS.values()].filter((p) => active.has(p.sicil));
   const filtered = data.tlFilter ? all.filter((p) => p.unvan === data.tlFilter) : all;

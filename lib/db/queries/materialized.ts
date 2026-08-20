@@ -80,6 +80,16 @@ interface PersonRow {
   unvan: string;
 }
 
+/**
+ * Zorunlu Cumartesi kuralı bu kişiye uygulanır mı? Kullanıcı kararı
+ * (2026-08-20): "takım liderine bağlı olan HERKES" — ünvan ayırt etmeksizin,
+ * personel önbelleğinde `takim_lideri` alanı dolu olan (bir TL'ye raporlayan)
+ * herkes kapsam dahilinde.
+ */
+export function cumartesiZorunluKisi(p: PersonInfo): boolean {
+  return p.takimLideri !== "Bilinmiyor";
+}
+
 export async function fetchPersonnel(): Promise<Map<string, PersonInfo>> {
   const { rows } = await selectPages<PersonRow>(
     "pdks_personnel_cache",

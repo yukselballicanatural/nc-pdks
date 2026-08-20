@@ -1,6 +1,7 @@
 import { loadPdksData, visiblePeople } from "@/lib/data/loadPdks";
 import { summary } from "@/lib/engine/summary";
 import { getNet } from "@/lib/engine/summary";
+import { cumartesiZorunluKisi } from "@/lib/db/queries/materialized";
 import { addDays, formatGs, gunAdi, isWeekday } from "@/lib/engine/mesaiGunu";
 import PageHeader from "@/components/ui/PageHeader";
 import StatCard from "@/components/ui/StatCard";
@@ -60,7 +61,8 @@ export default async function DashboardPage({
       startEndLookup,
       isGece(p.sicil),
       leaveLookup,
-      trackerKredi
+      trackerKredi,
+      cumartesiZorunluKisi(p)
     );
     totalNet += s.net;
     if (s.eksik > 0) totalEksik += s.eksik;
