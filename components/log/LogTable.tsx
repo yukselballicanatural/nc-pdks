@@ -104,7 +104,7 @@ export default function LogTable({ rows, showBuddyFlag }: { rows: LogRow[]; show
         { label: "Tüm Okuyucular", options: okuyucuList, value: okuyucu, onChange: setOkuyucu },
         { label: "Tüm Alanlar", options: ["Çalışma", "Mola/Dışı", "Yoksayılan"], value: alan, onChange: setAlan },
       ]}
-      rowClass={(r) => (r.buddy && showBuddyFlag ? "bg-red-950/15" : "")}
+      rowClass={(r) => (r.buddy && showBuddyFlag ? "row-danger" : "")}
       pageSize={250}
     />
   );

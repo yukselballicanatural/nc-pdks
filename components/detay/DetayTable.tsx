@@ -333,13 +333,13 @@ export default function DetayTable({
         }
         rowClass={(r) =>
           r.duzeltmeNeden
-            ? "bg-amber-950/20"
+            ? "row-violet"
             : r.izinTuru
               ? r.izinUcretli
-                ? "bg-emerald-950/10"
-                : "bg-yellow-500/10"
+                ? "row-ok"
+                : "row-warn"
               : !r.hasData && !r.hafta
-                ? "bg-red-950/10"
+                ? "row-danger"
                 : ""
         }
         pageSize={200}

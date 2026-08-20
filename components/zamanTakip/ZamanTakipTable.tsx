@@ -183,7 +183,7 @@ export default function ZamanTakipTable({ rows }: { rows: TrackerLogRow[] }) {
           { label: "Tüm Türler", options: turList, value: tur, onChange: setTur },
           { label: "Tüm Durumlar", options: ["Açık", "Kapandı", "Eşleşmedi"], value: durum, onChange: setDurum },
         ]}
-        rowClass={(r) => (r.acik ? "bg-amber-950/10" : r.eslesme === null ? "bg-red-950/10" : "")}
+        rowClass={(r) => (r.acik ? "row-warn" : r.eslesme === null ? "row-danger" : "")}
         pageSize={250}
       />
     </>

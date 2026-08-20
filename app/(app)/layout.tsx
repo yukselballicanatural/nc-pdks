@@ -41,10 +41,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <Suspense
         fallback={
           <div
-            className="w-[220px] shrink-0"
+            className="app-sidebar shrink-0"
             style={{
-              background: "rgba(5,9,26,0.80)",
-              borderRight: "1px solid rgba(255,255,255,0.085)",
+              background: "var(--sf-1)",
+              borderRight: "1px solid var(--edge-soft)",
             }}
           />
         }

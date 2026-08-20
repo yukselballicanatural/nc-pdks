@@ -331,7 +331,7 @@ export default function MolaTable({
           },
         ]}
         onRowClick={(r) => setDetay(r)}
-        rowClass={(r) => (r.mola > 120 ? "bg-amber-950/15" : "")}
+        rowClass={(r) => (r.mola > 120 ? "row-warn" : "")}
         pageSize={200}
       />
 

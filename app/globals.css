@@ -1,67 +1,233 @@
 @import "tailwindcss";
 
-/* ─────────────────────────────────────────────────────────────────
-   PDKS Pro — Liquid Glass Design System v2
-   Tema: Deep navy cam · klinik netlik · yüksek kontrast veri
-   Referans: macOS Sonoma / iOS 17 material layers
-   ───────────────────────────────────────────────────────────────── */
+/* ═════════════════════════════════════════════════════════════════════════
+   PDKS Pro — Liquid Glass Tasarım Sistemi
+   Referans: DESIGN_SYSTEM.md (Natural Clinic CRM), macOS Sequoia / iOS 18
+   ─────────────────────────────────────────────────────────────────────────
+   MİMARİ — İKİ KATMAN (DESIGN_SYSTEM.md §2.3):
+     1) FİZİK katmanı: --sf-* (yüzey), --edge-*, --sheen, --sh-*, --blur/--sat,
+        --r-* (yarıçap), --ease/--spring (easing). Camın "nasıl" göründüğü.
+     2) SEMANTİK katman: --tx-* (metin), --ac-* (marka), --cl-* (durum).
+        "Bu renk neyi anlatıyor" sorusunun cevabı.
 
+   KOYU tema :root'ta (varsayılan), AÇIK tema html[data-theme="light"] ile
+   ezilir. Bileşenler ASLA ham rgba() yazmaz — yalnızca token kullanır; aksi
+   hâlde açık temada okunmaz/patlar.
+
+   YARIÇAP ve EASING iki temada BİREBİR AYNI (DESIGN_SYSTEM.md §2.2 kuralı);
+   yalnızca opaklık/renk oranları değişir.
+   ═════════════════════════════════════════════════════════════════════════ */
+
+/* ───────────────────────────── KOYU TEMA (varsayılan) ───────────────────── */
 :root {
-  /* ── Zemin katmanları (derin navy) ── */
-  --bg-base:      #05091a;
-  --bg-surface:   #08112a;
-  --bg-elevated:  #0d1e3a;
-  --bg-overlay:   #122445;
+  color-scheme: dark;
 
-  /* ── Metin ── */
-  --tx-primary:   #f0f4ff;
-  --tx-secondary: #7a96be;
-  --tx-muted:     #3b5272;
-  --tx-disabled:  #243347;
+  /* ── Zemin ── */
+  --bg-base:     #05091a;
+  --bg-deep:     #070b14;
 
-  /* ── Accent — Sky / Emerald (klinik teknoloji) ── */
-  --ac-sky:        #38bdf8;
-  --ac-sky-dim:    rgba(56, 189, 248, 0.18);
-  --ac-sky-glow:   rgba(56, 189, 248, 0.30);
-  --ac-cyan:       #06d6a0;
-  --ac-cyan-dim:   rgba(6, 214, 160, 0.14);
+  /* ── Cam yüzeyler ── koyuda "karanlığın üstüne ince ışık tabakası" */
+  --sf-1:      rgba(255, 255, 255, 0.062);  /* ana panel */
+  --sf-2:      rgba(255, 255, 255, 0.038);  /* iç/ikincil yüzey */
+  --sf-3:      rgba(255, 255, 255, 0.085);  /* input, öne çıkan yüzey */
+  --sf-hover:  rgba(255, 255, 255, 0.115);
+  --sf-strong: rgba(11, 18, 38, 0.94);      /* popover/menü — opak tarafta */
+  --sf-sunken: rgba(4, 8, 20, 0.55);        /* gömülü alan (tablo zemini) */
 
-  /* ── Durum renkleri ── */
-  --cl-ok:         #34d399;
-  --cl-ok-dim:     rgba(52, 211, 153, 0.14);
-  --cl-warn:       #fbbf24;
-  --cl-warn-dim:   rgba(251, 191, 36, 0.14);
-  --cl-danger:     #f87171;
-  --cl-danger-dim: rgba(248, 113, 113, 0.14);
-  --cl-violet:     #a78bfa;
+  /* ── Kenar ışığı ── */
+  --edge:        rgba(255, 255, 255, 0.16);
+  --edge-soft:   rgba(255, 255, 255, 0.085);
+  --edge-strong: rgba(255, 255, 255, 0.24);
+
+  /* ── Cam kalınlığı: üst kenarda biriken ışık ── */
+  --sheen: inset 0 1px 0 0 rgba(255, 255, 255, 0.10),
+           inset 0 0 0 1px rgba(255, 255, 255, 0.035);
+
+  /* ── Katmanlı gölge — sert/tek katmanlı gölge YOK ── */
+  --sh-1: 0 2px 10px rgba(0, 0, 0, 0.34), 0 10px 32px rgba(0, 0, 0, 0.26);
+  --sh-2: 0 6px 18px rgba(0, 0, 0, 0.40), 0 20px 56px -12px rgba(0, 0, 0, 0.50);
+  --sh-3: 0 10px 28px rgba(0, 0, 0, 0.48), 0 36px 88px -18px rgba(0, 0, 0, 0.66);
+
+  --blur: 28px;
+  --sat:  175%;
+
+  /* ── Metin ── DESIGN_SYSTEM.md §2.4: küçük punto ASLA --tx-muted ile yazılmaz */
+  --tx-primary:   #f2f5fa;
+  --tx-secondary: #a9b4c8;
+  --tx-muted:     #78849c;
+  --tx-disabled:  #4d5872;
+
+  /* ── Marka ── sky + emerald (klinik teknoloji) */
+  --ac-sky:       #38bdf8;
+  --ac-sky-dim:   rgba(56, 189, 248, 0.16);
+  --ac-sky-edge:  rgba(56, 189, 248, 0.34);
+  --ac-sky-glow:  rgba(56, 189, 248, 0.30);
+  --ac-cyan:      #06d6a0;
+  --ac-cyan-dim:  rgba(6, 214, 160, 0.14);
+  --ac-cyan-edge: rgba(6, 214, 160, 0.32);
+
+  /* Birincil buton dolgusu (marka gradyanı) */
+  --ac-grad:      linear-gradient(150deg, #4fd1f9 0%, #38bdf8 48%, #06d6a0 100%);
+  --ac-on:        #04101f;   /* marka gradyanı ÜZERİNDEKİ metin */
+
+  /* ── Durum renkleri ── her biri: metin / zemin / kenar üçlüsü */
+  --cl-ok:         #6ee7b7;
+  --cl-ok-dim:     rgba(16, 185, 129, 0.14);
+  --cl-ok-edge:    rgba(52, 211, 153, 0.30);
+  --cl-warn:       #fcd34d;
+  --cl-warn-dim:   rgba(245, 158, 11, 0.13);
+  --cl-warn-edge:  rgba(251, 191, 36, 0.28);
+  --cl-danger:     #fca5a5;
+  --cl-danger-dim: rgba(239, 68, 68, 0.13);
+  --cl-danger-edge:rgba(248, 113, 113, 0.30);
+  --cl-info:       #c7d2fe;
+  --cl-info-dim:   rgba(99, 102, 241, 0.14);
+  --cl-info-edge:  rgba(165, 180, 252, 0.30);
+  --cl-violet:     #c4b5fd;
   --cl-violet-dim: rgba(167, 139, 250, 0.14);
+  --cl-violet-edge:rgba(167, 139, 250, 0.30);
 
-  /* ── Cam yüzey değerleri — daha belirgin ── */
-  --glass-bg:         rgba(255, 255, 255, 0.042);
-  --glass-bg-md:      rgba(255, 255, 255, 0.065);
-  --glass-bg-hi:      rgba(255, 255, 255, 0.090);
-  --glass-border:     rgba(255, 255, 255, 0.095);
-  --glass-border-hi:  rgba(255, 255, 255, 0.170);
-  --glass-shine-top:  rgba(255, 255, 255, 0.100);
+  /* ── Tablo ── ayrım ÇİZGİYLE değil YÜZEYLE yapılır (§7.2) */
+  --tb-head:   rgba(9, 15, 32, 0.96);
+  --tb-line:   rgba(255, 255, 255, 0.055);
+  --tb-zebra:  rgba(255, 255, 255, 0.014);
+  --tb-hover:  rgba(56, 189, 248, 0.075);
 
-  /* ── Blob renkler (canlı ama kontrollü) ── */
-  --blob-1: rgba(56,  189, 248, 0.090);
-  --blob-2: rgba(6,   214, 160, 0.065);
-  --blob-3: rgba(167, 139, 250, 0.060);
+  /* ── Mesh zemin blob'ları ── */
+  --blob-1: rgba(37, 99, 235, 0.30);
+  --blob-2: rgba(139, 92, 246, 0.24);
+  --blob-3: rgba(6, 214, 160, 0.20);
+  --blob-4: rgba(79, 70, 229, 0.20);
+  --blob-5: rgba(56, 189, 248, 0.14);
+  --mesh-base: linear-gradient(158deg, #0a1020 0%, #080d1a 46%, #0a0f1e 100%);
+
+  /* ── Kaydırma çubuğu ── */
+  --sb-thumb:       rgba(255, 255, 255, 0.14);
+  --sb-thumb-hover: rgba(255, 255, 255, 0.24);
+
+  /* ═══ GEOMETRİ — iki temada AYNI (§14) ═══ */
+  --r-lg:    26px;  /* sidebar, en dıştaki büyük panel */
+  --r-md:    20px;  /* modal, orta panel */
+  --r-sm:    14px;  /* iç kart */
+  --r-btn:   12px;  /* buton, nav öğesi */
+  --r-xs:    10px;  /* küçük buton, badge */
+  --r-input:  8px;  /* form elemanı */
+  --r-pill: 999px;  /* rozet, tam yuvarlak */
+
+  /* ═══ HAREKET — bu tasarım dilinin imzası (§12) ═══ */
+  --ease:   cubic-bezier(0.22, 1, 0.36, 1);
+  --spring: cubic-bezier(0.34, 1.4, 0.56, 1);
+
+  /* ── Geriye dönük uyum: eski --glass-* adları --sf-*'e bağlandı ──
+     40'tan fazla dosyada satır içi stil bunları kullanıyor; yeniden
+     adlandırmak yerine bağlayarak hepsi tek hamlede tema-duyarlı oldu. */
+  --glass-bg:        var(--sf-2);
+  --glass-bg-md:     var(--sf-1);
+  --glass-bg-hi:     var(--sf-3);
+  --glass-border:    var(--edge-soft);
+  --glass-border-hi: var(--edge);
+  --bg-surface:      var(--sf-1);
+  --bg-elevated:     var(--sf-3);
+  --bg-overlay:      var(--sf-strong);
 }
 
-/* ── Tailwind v4 tema token'ları ── */
+/* ───────────────────────────── AÇIK TEMA ───────────────────────────────── */
+html[data-theme="light"] {
+  color-scheme: light;
+
+  --bg-base: #cfdcfa;
+  --bg-deep: #cfdcfa;
+
+  /* Cam yüzeyler — DÜŞÜK opaklık kritik, yoksa "beyaz kart" olur (§2.1) */
+  --sf-1:      rgba(255, 255, 255, 0.44);
+  --sf-2:      rgba(255, 255, 255, 0.28);
+  --sf-3:      rgba(255, 255, 255, 0.60);
+  --sf-hover:  rgba(255, 255, 255, 0.72);
+  --sf-strong: rgba(252, 253, 255, 0.94);
+  --sf-sunken: rgba(255, 255, 255, 0.34);
+
+  --edge:        rgba(255, 255, 255, 0.62);
+  --edge-soft:   rgba(255, 255, 255, 0.40);
+  --edge-strong: rgba(255, 255, 255, 0.85);
+
+  --sheen: inset 0 1px 0 0 rgba(255, 255, 255, 0.85),
+           inset 0 0 0 1px rgba(255, 255, 255, 0.22),
+           inset 0 -1px 0 0 rgba(255, 255, 255, 0.14);
+
+  --sh-1: 0 2px 8px rgba(23, 43, 99, 0.06), 0 8px 28px rgba(23, 43, 99, 0.10);
+  --sh-2: 0 4px 14px rgba(23, 43, 99, 0.08), 0 18px 50px -10px rgba(23, 43, 99, 0.18);
+  --sh-3: 0 8px 24px rgba(23, 43, 99, 0.12), 0 32px 80px -16px rgba(23, 43, 99, 0.30);
+
+  --blur: 30px;
+  --sat:  190%;
+
+  /* Metin — yüksek kontrast; donuk gri camda okunmaz (§2.4) */
+  --tx-primary:   #12141a;
+  --tx-secondary: #454d5f;
+  --tx-muted:     #626a7d;
+  --tx-disabled:  #949cad;
+
+  /* Marka — parlak tonlar camda okunmadığı için KOYULAŞTIRILMIŞ eşdeğerler */
+  --ac-sky:       #0369a1;
+  --ac-sky-dim:   rgba(3, 105, 161, 0.11);
+  --ac-sky-edge:  rgba(3, 105, 161, 0.26);
+  --ac-sky-glow:  rgba(3, 105, 161, 0.22);
+  --ac-cyan:      #0f766e;
+  --ac-cyan-dim:  rgba(15, 118, 110, 0.11);
+  --ac-cyan-edge: rgba(15, 118, 110, 0.26);
+
+  --ac-grad:      linear-gradient(150deg, #17c1ad 0%, #0e8fb8 55%, #0369a1 100%);
+  --ac-on:        #ffffff;
+
+  --cl-ok:         #065f46;
+  --cl-ok-dim:     rgba(16, 185, 129, 0.14);
+  --cl-ok-edge:    rgba(6, 95, 70, 0.24);
+  --cl-warn:       #92400e;
+  --cl-warn-dim:   rgba(245, 158, 11, 0.17);
+  --cl-warn-edge:  rgba(180, 83, 9, 0.26);
+  --cl-danger:     #9f1239;
+  --cl-danger-dim: rgba(190, 18, 60, 0.10);
+  --cl-danger-edge:rgba(190, 18, 60, 0.24);
+  --cl-info:       #3730a3;
+  --cl-info-dim:   rgba(99, 102, 241, 0.11);
+  --cl-info-edge:  rgba(67, 56, 202, 0.22);
+  --cl-violet:     #5b21b6;
+  --cl-violet-dim: rgba(124, 58, 237, 0.11);
+  --cl-violet-edge:rgba(91, 33, 182, 0.22);
+
+  /* Tablo — yapışkan başlık opak-ish olmalı, altından satır görünmesin (§7.2) */
+  --tb-head:  rgba(244, 247, 255, 0.96);
+  --tb-line:  rgba(23, 43, 99, 0.075);
+  --tb-zebra: rgba(23, 43, 99, 0.022);
+  --tb-hover: rgba(3, 105, 161, 0.075);
+
+  --blob-1: rgba(37, 99, 235, 0.55);
+  --blob-2: rgba(139, 92, 246, 0.52);
+  --blob-3: rgba(13, 148, 136, 0.48);
+  --blob-4: rgba(79, 70, 229, 0.44);
+  --blob-5: rgba(56, 189, 248, 0.34);
+  --mesh-base: linear-gradient(158deg, #d3e1fb 0%, #d6d9fa 46%, #cfe9f2 100%);
+
+  --sb-thumb:       rgba(23, 43, 99, 0.20);
+  --sb-thumb-hover: rgba(23, 43, 99, 0.32);
+}
+
+/* ── Tailwind v4 tema köprüsü ── */
 @theme inline {
   --color-background: var(--bg-base);
   --color-foreground: var(--tx-primary);
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", monospace;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: var(--font-outfit), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-mono-code), ui-monospace, "SF Mono", monospace;
 }
 
-/* ─────────────────────────────────────────────────────────────────
-   TEMEL GÖVDE + MESH ARKAPLAN
-   ───────────────────────────────────────────────────────────────── */
-html, body {
+/* ═════════════════════════════════════════════════════════════════════════
+   GÖVDE + MESH ZEMİN
+   Cam efekti bunsuz ÇALIŞMAZ: arkada kırılacak canlı bir renk olmalı,
+   düz zeminde backdrop-filter hiçbir şey göstermez (§3).
+   ═════════════════════════════════════════════════════════════════════════ */
+html,
+body {
   min-height: 100%;
   background-color: var(--bg-base);
   color: var(--tx-primary);
@@ -73,228 +239,591 @@ html, body {
 
 body {
   background-image:
-    radial-gradient(ellipse 1100px 700px at  8% 15%, var(--blob-1), transparent),
-    radial-gradient(ellipse  800px 600px at 88% 72%, var(--blob-2), transparent),
-    radial-gradient(ellipse  700px 800px at 52% 108%, var(--blob-3), transparent);
+    radial-gradient(1250px 900px at  6%   0%, var(--blob-1), transparent 62%),
+    radial-gradient(1050px 820px at 97%   4%, var(--blob-2), transparent 60%),
+    radial-gradient(1150px 900px at 92%  70%, var(--blob-3), transparent 62%),
+    radial-gradient( 980px 820px at  2%  72%, var(--blob-4), transparent 60%),
+    radial-gradient( 900px 760px at 44%  36%, var(--blob-5), transparent 64%),
+    var(--mesh-base);
+  background-repeat: no-repeat;
   background-attachment: fixed;
+  background-size: 100% 100%;
 }
 
-/* ─────────────────────────────────────────────────────────────────
-   SCROLLBAR
-   ───────────────────────────────────────────────────────────────── */
-::-webkit-scrollbar { width: 5px; height: 5px; }
+/* Başlıklar — Outfit, hafif sıkılaştırılmış harf aralığı (§13) */
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  letter-spacing: -0.015em;
+}
+
+/* Sayısal hizalama: rakamlar eşit genişlikte, tabloda titreşim olmaz (§13) */
+.tnum,
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ═════════════════════════ KAYDIRMA ÇUBUĞU ═══════════════════════════════ */
+::-webkit-scrollbar { width: 9px; height: 9px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.12);
-  border-radius: 4px;
+  background: var(--sb-thumb);
+  border-radius: var(--r-pill);
+  border: 2px solid transparent;
+  background-clip: content-box;
 }
-::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.20); }
-* { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.12) transparent; }
+::-webkit-scrollbar-thumb:hover { background: var(--sb-thumb-hover); background-clip: content-box; }
+::-webkit-scrollbar-corner { background: transparent; }
+* { scrollbar-width: thin; scrollbar-color: var(--sb-thumb) transparent; }
 
-/* ── Seçim rengi ── */
-::selection { background: rgba(56,189,248,0.30); color: #f0f4ff; }
+::selection { background: var(--ac-sky-glow); color: var(--tx-primary); }
 
-/* ── Odak halkası (WCAG AA) ── */
 :focus-visible {
   outline: 2px solid var(--ac-sky);
   outline-offset: 2px;
-  border-radius: 6px;
+  border-radius: var(--r-input);
 }
 
-/* ─────────────────────────────────────────────────────────────────
-   CAM YÜZEYLERİ
-   ───────────────────────────────────────────────────────────────── */
+/* ═════════════════════════════════════════════════════════════════════════
+   CAM YÜZEY FORMÜLÜ (§4)
+   HİYERARŞİ KURALI: yalnızca EN DIŞTAKİ panel backdrop-filter taşır.
+   İçindeki kartlar sadece opaklık farkıyla ayrışır — ikinci bir blur
+   eklenmez (hem performans hem görsel karmaşa).
+   ═════════════════════════════════════════════════════════════════════════ */
 
-/* Temel cam panel — sidebar, header, barlar */
+/* En dıştaki panel — sidebar, header şeridi */
 .glass {
-  background: var(--glass-bg);
-  backdrop-filter: blur(24px) saturate(150%);
-  -webkit-backdrop-filter: blur(24px) saturate(150%);
-  border: 1px solid var(--glass-border);
+  background: var(--sf-1);
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(var(--sat));
+  backdrop-filter: blur(var(--blur)) saturate(var(--sat));
+  border: 1px solid var(--edge-soft);
 }
 
-/* Orta kart */
+/* Orta kart — iç içe blur YOK, yalnızca opaklık + sheen */
 .glass-card {
-  background: var(--glass-bg-md);
-  backdrop-filter: blur(18px) saturate(140%);
-  -webkit-backdrop-filter: blur(18px) saturate(140%);
-  border: 1px solid var(--glass-border);
-  border-radius: 16px;
-  box-shadow:
-    0 1px 0 rgba(255,255,255,0.06) inset,
-    0 8px 32px rgba(0,0,0,0.25);
+  background: var(--sf-1);
+  border: 1px solid var(--edge-soft);
+  border-radius: var(--r-sm);
+  box-shadow: var(--sh-1), var(--sheen);
+  transition: background 0.25s var(--ease), border-color 0.25s var(--ease),
+              box-shadow 0.25s var(--ease), transform 0.28s var(--spring);
 }
 
-/* Modal cam — en opak */
+/* İç yüzey — "cam üstünde cam" */
+.glass-inner {
+  background: var(--sf-2);
+  border: 1px solid var(--edge-soft);
+  border-radius: var(--r-sm);
+  box-shadow: var(--sheen);
+}
+
+/* Modal — panellerden AĞIR blur, daha yüksek radius (§4) */
 .glass-modal {
-  background: rgba(8, 16, 34, 0.92);
-  backdrop-filter: blur(48px) saturate(170%);
-  -webkit-backdrop-filter: blur(48px) saturate(170%);
-  border: 1px solid var(--glass-border-hi);
-  border-radius: 20px;
-  box-shadow:
-    0 0 0 1px rgba(255,255,255,0.05) inset,
-    0 48px 96px rgba(0,0,0,0.65),
-    0 12px 32px rgba(0,0,0,0.45);
+  background: var(--sf-strong);
+  -webkit-backdrop-filter: blur(44px) saturate(200%);
+  backdrop-filter: blur(44px) saturate(200%);
+  border: 1px solid var(--edge);
+  border-radius: var(--r-md);
+  box-shadow: var(--sh-3), var(--sheen);
 }
 
-/* Grafik cam paneli */
 .glass-chart {
-  background: rgba(8, 17, 36, 0.72);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid var(--glass-border);
-  border-radius: 16px;
-  box-shadow:
-    0 1px 0 rgba(255,255,255,0.05) inset,
-    0 6px 24px rgba(0,0,0,0.20);
+  background: var(--sf-1);
+  border: 1px solid var(--edge-soft);
+  border-radius: var(--r-sm);
+  box-shadow: var(--sh-1), var(--sheen);
 }
 
-/* Tablo konteyneri — yüksek opaklık, okunabilirlik öncelikli */
+/* Tablo kabı — okunabilirlik öncelikli, gömülü yüzey */
 .glass-table {
-  background: rgba(7, 14, 28, 0.88);
-  border: 1px solid rgba(255,255,255,0.085);
-  border-radius: 14px;
+  background: var(--sf-sunken);
+  border: 1px solid var(--edge-soft);
+  border-radius: var(--r-sm);
+  box-shadow: var(--sh-1), var(--sheen);
   overflow: hidden;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.22);
 }
 
-/* Tablo header — sticky, tam opak */
 .glass-thead {
-  background: rgba(6, 11, 23, 0.97);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border-bottom: 1px solid rgba(255,255,255,0.08);
+  background: var(--tb-head);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  backdrop-filter: blur(18px) saturate(180%);
+  border-bottom: 1px solid var(--edge-soft);
 }
 
-/* İnce üst parıltı kenarlığı */
-.glass-shine::before {
+/* Kart hover — hafif kalkma + hafif büyüme (§4) */
+.glass-hover:hover {
+  background: var(--sf-hover);
+  border-color: var(--edge);
+  transform: translateY(-3px) scale(1.012);
+  box-shadow: var(--sh-2), var(--sheen);
+}
+
+/* Kartın üstünde cam kalınlığı hissi veren ince ışık çizgisi (§11) */
+.glass-hairline { position: relative; }
+.glass-hairline::before {
   content: "";
   position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(
-    135deg,
-    rgba(255,255,255,0.09) 0%,
-    transparent 45%
-  );
+  top: 0;
+  left: 12px;
+  right: 12px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--edge-strong), transparent);
   pointer-events: none;
 }
 
-/* Istatistik kartı hover — yalnızca CSS, JS gerekmez */
-.stat-card {
-  transition: transform 0.22s cubic-bezier(0.22,1,0.36,1),
-              box-shadow 0.22s cubic-bezier(0.22,1,0.36,1);
-}
-.stat-card:hover {
-  transform: translateY(-3px);
-}
-
-/* ─────────────────────────────────────────────────────────────────
-   FORM ELEMENTLERİ
-   ───────────────────────────────────────────────────────────────── */
+/* ═════════════════════════ FORM ELEMANLARI (§8) ══════════════════════════ */
 .input-glass {
-  background: rgba(255,255,255,0.055);
-  border: 1px solid rgba(255,255,255,0.11);
+  background: var(--sf-3);
+  border: 1px solid var(--edge-soft);
   color: var(--tx-primary);
-  border-radius: 9px;
-  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  border-radius: var(--r-input);
+  box-shadow: var(--sheen);
+  transition: border-color 0.16s var(--ease), background 0.16s var(--ease),
+              box-shadow 0.16s var(--ease);
   outline: none;
 }
-.input-glass:focus {
+.input-glass:focus,
+.input-glass:focus-visible {
   border-color: var(--ac-sky);
-  background: rgba(56,189,248,0.07);
-  box-shadow: 0 0 0 3px rgba(56,189,248,0.14);
+  box-shadow: 0 0 0 3px var(--ac-sky-dim), var(--sheen);
+  outline: none;
 }
 .input-glass::placeholder { color: var(--tx-muted); }
 
-/* Date picker */
-input[type="date"]::-webkit-calendar-picker-indicator {
-  filter: invert(0.6);
-  cursor: pointer;
-}
-
-/* Select ok */
 select.input-glass {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%237b93b8' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7' fill='none'%3E%3Cpath d='M1 1.5L5 5.5L9 1.5' stroke='%23808ca4' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 10px center;
-  padding-right: 28px;
+  background-position: right 11px center;
+  padding-right: 30px;
   appearance: none;
   -webkit-appearance: none;
 }
-
-/* ─────────────────────────────────────────────────────────────────
-   BUTONLAR
-   ───────────────────────────────────────────────────────────────── */
-.btn-ghost {
-  background: rgba(255,255,255,0.045);
-  border: 1px solid rgba(255,255,255,0.09);
-  color: var(--tx-secondary);
-  border-radius: 10px;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
-}
-.btn-ghost:hover {
-  background: rgba(56,189,248,0.09);
-  border-color: rgba(56,189,248,0.22);
+/* Native açılır liste tarayıcı çizer — okunur bir zemin şart */
+select.input-glass option {
+  background: var(--sf-strong);
   color: var(--tx-primary);
 }
-.btn-ghost:active { transform: scale(0.98); }
+
+/* ═════════════════════════════ BUTONLAR (§6) ═════════════════════════════
+   KURAL: birincil ve ikincil buton AYNI geometriye sahip (padding, radius,
+   font) — yan yana dururken yükseklikleri eşit olsun, hiyerarşi yalnızca
+   renk/kontrastla anlatılsın.
+   ═══════════════════════════════════════════════════════════════════════ */
+.btn-base {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--r-btn);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.25;
+  white-space: nowrap;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: background 0.2s var(--ease), border-color 0.2s var(--ease),
+              color 0.2s var(--ease), box-shadow 0.24s var(--ease),
+              transform 0.28s var(--spring), filter 0.2s var(--ease);
+}
+.btn-base:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Birincil — marka gradyanı + üst yarıda parlama katmanı */
+.btn-primary {
+  position: relative;
+  overflow: hidden;
+  background: var(--ac-grad);
+  color: var(--ac-on);
+  border: 1px solid var(--edge);
+  box-shadow: 0 6px 20px -5px var(--ac-sky-glow), var(--sheen);
+}
+.btn-primary::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 52% 0;
+  background: linear-gradient(rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0));
+  border-radius: inherit;
+  pointer-events: none;
+}
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-1.5px);
+  filter: saturate(115%) brightness(1.05);
+  box-shadow: 0 10px 28px -6px var(--ac-sky-glow), var(--sheen);
+}
+.btn-primary:active:not(:disabled) { transform: scale(0.965); }
+
+/* İkincil / ghost — nötr aksiyon */
+.btn-ghost {
+  background: var(--sf-3);
+  border: 1px solid var(--edge-soft);
+  color: var(--tx-secondary);
+  border-radius: var(--r-btn);
+  box-shadow: var(--sheen);
+  transition: background 0.2s var(--ease), border-color 0.2s var(--ease),
+              color 0.2s var(--ease), transform 0.28s var(--spring);
+}
+.btn-ghost:hover:not(:disabled) {
+  background: var(--sf-hover);
+  border-color: var(--edge);
+  color: var(--tx-primary);
+  transform: translateY(-1px);
+}
+.btn-ghost:active:not(:disabled) { transform: scale(0.96); }
 
 .btn-danger-ghost {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: var(--sf-2);
+  border: 1px solid var(--edge-soft);
   color: var(--tx-secondary);
-  border-radius: 10px;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  border-radius: var(--r-btn);
+  box-shadow: var(--sheen);
+  transition: background 0.2s var(--ease), border-color 0.2s var(--ease),
+              color 0.2s var(--ease), transform 0.28s var(--spring);
 }
-.btn-danger-ghost:hover {
-  background: rgba(248,113,113,0.11);
-  border-color: rgba(248,113,113,0.28);
+.btn-danger-ghost:hover:not(:disabled) {
+  background: var(--cl-danger-dim);
+  border-color: var(--cl-danger-edge);
   color: var(--cl-danger);
 }
+.btn-danger-ghost:active:not(:disabled) { transform: scale(0.96); }
 
-/* ─────────────────────────────────────────────────────────────────
-   OVERLAY / MODAL BACKDROP
-   ───────────────────────────────────────────────────────────────── */
-.modal-backdrop { animation: fadeIn 0.2s ease both; }
-.modal-panel    { animation: scaleIn 0.32s cubic-bezier(0.22,1,0.36,1) both; }
+/* İkon butonu — kare, yalnızca ikon */
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-xs);
+  background: var(--sf-2);
+  border: 1px solid var(--edge-soft);
+  color: var(--tx-secondary);
+  cursor: pointer;
+  box-shadow: var(--sheen);
+  transition: background 0.2s var(--ease), color 0.2s var(--ease),
+              border-color 0.2s var(--ease), transform 0.28s var(--spring);
+}
+.btn-icon:hover {
+  background: var(--ac-sky-dim);
+  border-color: var(--ac-sky-edge);
+  color: var(--ac-sky);
+}
+.btn-icon:active { transform: scale(0.93); }
 
-@media (prefers-reduced-motion: reduce) {
-  .modal-backdrop, .modal-panel { animation: none !important; }
+/* ── Araç çubuğu yükseklik hizalama (§6.7) ──
+   Farklı denetimlerin (input/select/buton) doğal yükseklikleri birkaç px
+   farklı olur. box-sizing:border-box ŞART: cam katmanı 1px kenarlık
+   ekliyor, onsuz 1-2px kayma çıkar. */
+.nc-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.nc-toolbar > .btn-base,
+.nc-toolbar > .btn-ghost,
+.nc-toolbar > .btn-primary,
+.nc-toolbar > .input-glass,
+.nc-toolbar > .nc-field > .input-glass,
+.nc-toolbar input.input-glass,
+.nc-toolbar select.input-glass {
+  height: 34px;
+  box-sizing: border-box;
 }
 
-/* ─────────────────────────────────────────────────────────────────
-   GİRİŞ ANİMASYONLARI
-   ───────────────────────────────────────────────────────────────── */
+/* ═══════════════════ ROZET / DURUM ETİKETİ (PILL) (§9) ═══════════════════
+   Desen: durumun zemini soluk, metni doygun — ikisi aynı renk ailesinden.
+   ═══════════════════════════════════════════════════════════════════════ */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 9px;
+  border-radius: var(--r-pill);
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+.pill-ok     { background: var(--cl-ok-dim);     border-color: var(--cl-ok-edge);     color: var(--cl-ok); }
+.pill-warn   { background: var(--cl-warn-dim);   border-color: var(--cl-warn-edge);   color: var(--cl-warn); }
+.pill-danger { background: var(--cl-danger-dim); border-color: var(--cl-danger-edge); color: var(--cl-danger); }
+.pill-info   { background: var(--cl-info-dim);   border-color: var(--cl-info-edge);   color: var(--cl-info); }
+.pill-violet { background: var(--cl-violet-dim); border-color: var(--cl-violet-edge); color: var(--cl-violet); }
+.pill-sky    { background: var(--ac-sky-dim);    border-color: var(--ac-sky-edge);    color: var(--ac-sky); }
+.pill-cyan   { background: var(--ac-cyan-dim);   border-color: var(--ac-cyan-edge);   color: var(--ac-cyan); }
+.pill-mute   { background: var(--sf-2);          border-color: var(--edge-soft);      color: var(--tx-secondary); }
+
+/* ═══════════════════════ KPI KARTI (§10) ════════════════════════════════
+   Her karta style="--kpi:#38bdf8" verilir; üst kenar, köşe ışıması ve ikon
+   zemini O TEK değişkenden türer.
+   DİKKAT: color-mix() BİLİNÇLİ olarak kullanılmıyor — desteklenmeyen bir
+   tarayıcıda tüm bildirim geçersiz sayılır ve öğe görünmez kalır (§10).
+   Yerine color-mix'siz `--kpi-*` alt değişkenleri satır içinde verilir.
+   ═══════════════════════════════════════════════════════════════════════ */
+.kpi {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--r-sm);
+  padding: 16px 16px 14px;
+  background: var(--sf-1);
+  border: 1px solid var(--edge-soft);
+  border-top: 2.5px solid var(--kpi-edge, var(--edge));
+  box-shadow: var(--sh-1), var(--sheen);
+  transition: transform 0.28s var(--spring), box-shadow 0.25s var(--ease),
+              background 0.25s var(--ease);
+}
+.kpi:hover {
+  transform: translateY(-3px) scale(1.012);
+  box-shadow: var(--sh-2), var(--sheen);
+  background: var(--sf-hover);
+}
+.kpi::after {
+  content: "";
+  position: absolute;
+  right: -18px;
+  top: -18px;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  filter: blur(20px);
+  opacity: 0.32;
+  background: var(--kpi, var(--ac-sky));
+  pointer-events: none;
+}
+html[data-theme="light"] .kpi::after {
+  opacity: 0.16;
+  filter: blur(26px);
+  width: 58px;
+  height: 58px;
+}
+/* Ton sınıfları — kartın ÜÇ görsel unsuru (üst kenar, köşe ışıması, ikon
+   zemini) tek bir üçlüden türer. Renkler token olduğu için açık temada
+   otomatik koyulaşmış eşdeğerlerine döner. */
+.kpi-sky    { --kpi: var(--ac-sky);       --kpi-dim: var(--ac-sky-dim);    --kpi-edge: var(--ac-sky-edge); }
+.kpi-cyan   { --kpi: var(--ac-cyan);      --kpi-dim: var(--ac-cyan-dim);   --kpi-edge: var(--ac-cyan-edge); }
+.kpi-ok     { --kpi: var(--cl-ok);        --kpi-dim: var(--cl-ok-dim);     --kpi-edge: var(--cl-ok-edge); }
+.kpi-warn   { --kpi: var(--cl-warn);      --kpi-dim: var(--cl-warn-dim);   --kpi-edge: var(--cl-warn-edge); }
+.kpi-danger { --kpi: var(--cl-danger);    --kpi-dim: var(--cl-danger-dim); --kpi-edge: var(--cl-danger-edge); }
+.kpi-violet { --kpi: var(--cl-violet);    --kpi-dim: var(--cl-violet-dim); --kpi-edge: var(--cl-violet-edge); }
+.kpi-mute   { --kpi: var(--tx-secondary); --kpi-dim: var(--sf-2);          --kpi-edge: var(--edge-soft); }
+
+.kpi-ico {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--r-xs);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--kpi-dim, var(--sf-2));
+  border: 1px solid var(--kpi-edge, var(--edge-soft));
+  color: var(--kpi, var(--ac-sky));
+}
+.kpi-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--kpi, var(--ac-sky));
+}
+.kpi-val {
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--tx-primary);
+  font-family: var(--font-display);
+}
+/* §2.4 kontrast kuralı: ipucu metni --tx-muted DEĞİL --tx-secondary */
+.kpi-hint {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--tx-secondary);
+}
+
+/* ═══════════════════ SEGMENT KONTROL — kayan gösterge (§5.6) ═════════════
+   Aktif zemini her seçimde yeniden boyamak yerine TEK katmanı kaydırmak:
+   animasyon pürüzsüz olur. Gösterge CSS-only (peer/has yerine JS'siz
+   yaklaşım tercih edildi: her buton kendi zeminini taşır ama geçiş
+   --spring ile yumuşatılır).
+   ═══════════════════════════════════════════════════════════════════════ */
+.seg {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--r-btn);
+  background: var(--sf-2);
+  border: 1px solid var(--edge-soft);
+  box-shadow: var(--sheen);
+}
+.seg-item {
+  position: relative;
+  padding: 5px 11px;
+  border-radius: var(--r-xs);
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  color: var(--tx-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 0.22s var(--ease), color 0.22s var(--ease),
+              border-color 0.22s var(--ease), transform 0.3s var(--spring),
+              box-shadow 0.25s var(--ease);
+}
+.seg-item:hover:not(.seg-on) {
+  background: var(--sf-hover);
+  color: var(--tx-primary);
+}
+.seg-item:active { transform: scale(0.955); }
+.seg-on {
+  background: var(--ac-sky-dim);
+  border-color: var(--ac-sky-edge);
+  color: var(--ac-sky);
+  box-shadow: var(--sheen);
+}
+
+/* ═══════════════════════════ TABLO DİLİ (§7) ═════════════════════════════
+   İKİ farklı yoğunluk, İÇERİK TÜRÜ karar verir (§7.4):
+     .tbl-airy  → kişi/liste tablosu (az sütun, okunabilirlik önceliği)
+     .tbl-dense → yoğun veri (çok sütun, tarama hızı önceliği)
+   Ayrım ÇİZGİYLE değil YÜZEYLE yapılır: kılcal alt kenar + zebra + hover.
+   DİKEY ÇİZGİ HİÇ KULLANILMAZ — cam üstünde tam ızgara ağır durur.
+   ═══════════════════════════════════════════════════════════════════════ */
+.tbl {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.tbl thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--tb-head);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  backdrop-filter: blur(18px) saturate(180%);
+  border-bottom: 1px solid var(--edge-soft);
+  color: var(--tx-secondary);
+  font-weight: 700;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-align: left;
+}
+.tbl tbody td {
+  border-bottom: 1px solid var(--tb-line);
+  color: var(--tx-primary);
+  vertical-align: middle;
+}
+.tbl tbody tr:last-child td { border-bottom: 0; }
+.tbl tbody tr:nth-child(even) td { background: var(--tb-zebra); }
+
+/* Satır durum vurguları — SIRA KRİTİK: zebra'dan SONRA, hover'dan ÖNCE.
+   Üçünün de özgüllüğü eşit (0,2,3) olduğu için kazananı kaynak sırası
+   belirler: zebra < durum < hover. !important kullanmak hover'ı öldürürdü. */
+.tbl tbody tr.row-ok td     { background: var(--cl-ok-dim); }
+.tbl tbody tr.row-warn td   { background: var(--cl-warn-dim); }
+.tbl tbody tr.row-danger td { background: var(--cl-danger-dim); }
+.tbl tbody tr.row-info td   { background: var(--cl-info-dim); }
+.tbl tbody tr.row-violet td { background: var(--cl-violet-dim); }
+.tbl tbody tr.row-mute td   { background: var(--sf-2); }
+
+.tbl tbody tr { transition: background 0.14s var(--ease); }
+.tbl tbody tr:hover td { background: var(--tb-hover); }
+
+/* Ferah yoğunluk — kişi listeleri */
+.tbl-airy thead th { padding: 10px 12px; font-size: 10.5px; letter-spacing: 0.07em; }
+.tbl-airy tbody td { padding: 9px 12px; font-size: 12px; }
+
+/* Sıkı yoğunluk — alarm/log/deal listeleri */
+.tbl-dense thead th { padding: 8px 10px; font-size: 9.5px; letter-spacing: 0.07em; }
+.tbl-dense tbody td { padding: 6px 10px; font-size: 11px; }
+
+/* Sıralanabilir başlık */
+.tbl th.sortable { cursor: pointer; user-select: none; }
+.tbl th.sortable:hover { color: var(--tx-primary); }
+
+/* Tıklanabilir satır */
+.tbl tbody tr.row-click { cursor: pointer; }
+
+/* Kimlik/kod alanları mono — "bu bir kod" hissi (§7.1) */
+.cell-code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--tx-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ═══════════════════ TOPLAM/ÖZET ŞERİDİ (§7.3) ══════════════════════════ */
+.totals {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  padding: 10px 16px;
+  border-radius: var(--r-sm);
+  background: var(--sf-2);
+  border: 1px solid var(--edge-soft);
+  box-shadow: var(--sheen);
+}
+.totals-figs { display: flex; flex-wrap: wrap; gap: 8px 22px; }
+.total-fig { display: inline-flex; flex-direction: column; line-height: 1.25; }
+.total-fig i {
+  font-style: normal;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--tx-secondary);
+}
+.total-fig strong {
+  font-size: 14px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--tx-primary);
+}
+
+/* ═════════════════════ MODAL / OVERLAY (§4) ══════════════════════════════ */
+.modal-backdrop {
+  background: rgba(8, 12, 26, 0.55);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  backdrop-filter: blur(14px) saturate(140%);
+  animation: fadeIn 0.2s ease both;
+}
+html[data-theme="light"] .modal-backdrop {
+  background: rgba(18, 26, 48, 0.26);
+}
+.modal-panel { animation: modalIn 0.46s var(--spring) both; }
+
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(16px) scale(0.94); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ═══════════════════════ GİRİŞ ANİMASYONLARI ════════════════════════════ */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(18px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
+@keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
 @keyframes scaleIn {
   from { opacity: 0; transform: scale(0.95) translateY(10px); }
   to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 @keyframes shimmer {
   0%   { background-position: -600px 0; }
-  100% { background-position: 600px 0; }
+  100% { background-position:  600px 0; }
 }
 @keyframes linkSweep {
   0%   { transform: translateX(-100%); }
   100% { transform: translateX(100%); }
 }
-@keyframes pulseGlow {
-  0%, 100% { opacity: 0.5; }
-  50%       { opacity: 1; }
-}
 
-.anim-fade-up    { animation: fadeUp 0.52s cubic-bezier(0.22,1,0.36,1) both; }
-.anim-fade-in    { animation: fadeIn 0.28s ease both; }
-.anim-scale-in   { animation: scaleIn 0.36s cubic-bezier(0.22,1,0.36,1) both; }
+.anim-fade-up  { animation: fadeUp 0.52s var(--ease) both; }
+.anim-fade-in  { animation: fadeIn 0.28s ease both; }
+.anim-scale-in { animation: scaleIn 0.36s var(--ease) both; }
 
 .anim-delay-1 { animation-delay: 0.06s; }
 .anim-delay-2 { animation-delay: 0.12s; }
@@ -302,32 +831,20 @@ select.input-glass {
 .anim-delay-4 { animation-delay: 0.24s; }
 .anim-delay-5 { animation-delay: 0.30s; }
 
-@media (prefers-reduced-motion: reduce) {
-  .anim-fade-up,
-  .anim-fade-in,
-  .anim-scale-in { animation: none !important; }
-}
-
-/* ─────────────────────────────────────────────────────────────────
-   İSKELET (loading.tsx)
-   ───────────────────────────────────────────────────────────────── */
+/* ═══════════════════════════ İSKELET ════════════════════════════════════ */
 .skel {
   background: linear-gradient(
     90deg,
-    rgba(255,255,255,0.038) 0%,
-    rgba(255,255,255,0.090) 50%,
-    rgba(255,255,255,0.038) 100%
+    var(--sf-2) 0%,
+    var(--sf-hover) 50%,
+    var(--sf-2) 100%
   );
   background-size: 900px 100%;
   animation: shimmer 1.5s linear infinite;
-  border-radius: 8px;
+  border-radius: var(--r-input);
 }
 
-/* Sidebar bağlantı bekleme çizgisi (useLinkStatus) */
-.link-pending {
-  position: relative;
-  overflow: hidden;
-}
+.link-pending { position: relative; overflow: hidden; }
 .link-pending::after {
   content: "";
   position: absolute;
@@ -339,7 +856,103 @@ select.input-glass {
   animation: linkSweep 0.9s ease-in-out infinite;
 }
 
+/* ═══════════════════════ SOL MENÜ — full ↔ mini (§5) ════════════════════
+   Genişlet/daralt CSS ile yönetiliyor: <html data-sidebar="mini"> yazılınca
+   genişlik, etiket görünürlüğü ve hizalama CSS'ten değişir. React yalnızca
+   özniteliği yazar.
+
+   NEDEN CSS: durum React state'inde tutulsaydı ilk boyamada sunucu her zaman
+   "full" render eder, dar ekranda/mini tercihinde sayfa bir kare geniş
+   görünüp sonra büzülürdü. Öznitelik layout'taki bloklayan script tarafından
+   ilk boyamadan önce yazıldığı için bu sıçrama hiç oluşmuyor.
+   ═══════════════════════════════════════════════════════════════════════ */
+.app-sidebar {
+  width: 240px;
+  transition: width 0.28s var(--ease);
+}
+html[data-sidebar="mini"] .app-sidebar { width: 64px; }
+
+/* Mini modda gizlenenler (etiketler, kullanıcı adı, alt başlık) */
+html[data-sidebar="mini"] .sb-full-only { display: none !important; }
+
+/* Yalnızca mini modda görünenler */
+.sb-mini-only { display: none !important; }
+html[data-sidebar="mini"] .sb-mini-only { display: flex !important; }
+
+/* Mini modda tüm satırlar ortalanır, yan boşluklar daralır */
+html[data-sidebar="mini"] .sb-pad { padding-left: 10px; padding-right: 10px; }
+html[data-sidebar="mini"] .sb-row { justify-content: center; gap: 0; }
+html[data-sidebar="mini"] .sb-nav-item { padding-left: 0; padding-right: 0; }
+
+/* Nav öğesi */
+.sb-nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 11px;
+  border-radius: var(--r-btn);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--tx-secondary);
+  border: 1px solid transparent;
+  transition: background 0.22s var(--ease), color 0.22s var(--ease),
+              border-color 0.22s var(--ease), transform 0.3s var(--spring);
+}
+.sb-nav-item:hover:not(.sb-on) {
+  background: var(--sf-hover);
+  color: var(--tx-primary);
+}
+.sb-nav-item:active { transform: scale(0.97); }
+.sb-on {
+  background: var(--ac-sky-dim);
+  border-color: var(--ac-sky-edge);
+  color: var(--ac-sky);
+  font-weight: 600;
+  box-shadow: var(--sheen);
+}
+/* Aktif göstergesi — sol kenarda ince ışık çubuğu */
+.sb-on::before {
+  content: "";
+  position: absolute;
+  left: -1px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 18px;
+  border-radius: 0 var(--r-pill) var(--r-pill) 0;
+  background: var(--ac-sky);
+  box-shadow: 0 0 8px var(--ac-sky-glow);
+}
+
+/* ═══════════════════════ Z-KATMAN SÖZLÜĞÜ ═══════════════════════════════
+   Takvim/popover'ın tablonun ARKASINDA kalması bu projede gerçek bir
+   hataydı. Kök sebep: backdrop-filter taşıyan bir kap YENİ BİR YIĞIN
+   BAĞLAMI (stacking context) açar; içindeki z-50 yalnızca O bağlamda
+   geçerli olur. Tablonun sticky thead'i (z-2) ise ÜST bağlamda durduğu
+   için kabın tamamının üstüne biner.
+   Çözüm iki katmanlı: (1) header kabına yüksek z-index verilir,
+   (2) açılır panel portal ile <body>'ye taşınıp position:fixed olur —
+   böylece hiçbir ata yığın bağlamına hapsolmaz.
+   ═══════════════════════════════════════════════════════════════════════ */
+.z-header  { position: relative; z-index: 40; }
+.z-popover { z-index: 200; }
+.z-modal   { z-index: 300; }
+
 @media (prefers-reduced-motion: reduce) {
+  .modal-backdrop,
+  .modal-panel,
+  .anim-fade-up,
+  .anim-fade-in,
+  .anim-scale-in { animation: none !important; }
   .skel { animation: none; }
   .link-pending::after { animation: none; }
+  .glass-card,
+  .glass-hover:hover,
+  .kpi,
+  .kpi:hover,
+  .btn-base,
+  .btn-ghost,
+  .btn-primary,
+  .seg-item { transition: none; transform: none; }
 }

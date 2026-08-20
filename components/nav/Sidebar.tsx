@@ -1,8 +1,10 @@
 "use client";
 
 import Link, { useLinkStatus } from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
-import { useRouter } from "next/navigation";
+import { usePathname, useSearchParams, useRouter } from "next/navigation";
+import { useState } from "react";
+import ThemeToggle from "./ThemeToggle";
+import { useHtmlAttr } from "@/lib/ui/useHtmlAttr";
 
 /**
  * Tıklanan bağlantıda gezinme sürerken görünen ince süpürme çizgisi.
@@ -53,15 +55,6 @@ function IconBell() {
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
       <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-    </svg>
-  );
-}
-function IconUsers() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-      <circle cx="9" cy="7" r="4"/>
-      <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
     </svg>
   );
 }
@@ -188,23 +181,97 @@ export interface NavItem {
   adminOnly?: boolean;
 }
 
-export const NAV_ITEMS: NavItem[] = [
-  { href: "/dashboard",        label: "Dashboard",        icon: "dashboard" },
-  { href: "/ozet",             label: "Özet",             icon: "ozet" },
-  { href: "/gunluk-detay",     label: "Günlük Detay",     icon: "gunluk-detay" },
-  { href: "/mola-detayi",      label: "Mola Detayı",      icon: "mola-detayi" },
-  { href: "/zaman-takip",      label: "Zaman Takip",      icon: "zaman-takip" },
-  { href: "/pdks-alarm",       label: "PDKS Alarm",       icon: "pdks-alarm" },
-  { href: "/buddy-punch",      label: "Buddy Punch",      icon: "buddy-punch" },
-  { href: "/log",              label: "Geçiş Kayıtları",  icon: "log" },
-  { href: "/duzeltmeler",      label: "Düzeltmeler",      icon: "duzeltmeler" },
-  { href: "/takimlar",         label: "Takımlar",         icon: "takimlar" },
-  { href: "/izinler",          label: "İzinler",          icon: "izinler" },
-  { href: "/kapi-ayarlari",    label: "Kapı Ayarları",    icon: "kapi-ayarlari",     adminOnly: true },
-  { href: "/personel",         label: "Personel",         icon: "personel",          adminOnly: true },
-  { href: "/zoho-kullanicilar",label: "Zoho Kullanıcılar",icon: "zoho-kullanicilar", adminOnly: true },
-  { href: "/senkronizasyon",   label: "Senkronizasyon",   icon: "senkronizasyon",    adminOnly: true },
+export interface NavGroup {
+  /** Bölüm başlığı — mini modda gizlenir. */
+  baslik: string;
+  items: NavItem[];
+}
+
+/**
+ * Menü bölümlere ayrıldı: 15 düz öğe taranması zor bir listeydi, artık
+ * "ne aradığıma göre nereye bakacağım" belli. Sıra bilinçli — günlük
+ * kullanımda en sık açılanlar en üstte.
+ */
+export const NAV_GROUPS: NavGroup[] = [
+  {
+    baslik: "Analiz",
+    items: [
+      { href: "/dashboard",    label: "Dashboard",       icon: "dashboard" },
+      { href: "/ozet",         label: "Özet",            icon: "ozet" },
+      { href: "/gunluk-detay", label: "Günlük Detay",    icon: "gunluk-detay" },
+    ],
+  },
+  {
+    baslik: "Kayıtlar",
+    items: [
+      { href: "/mola-detayi",  label: "Mola Detayı",     icon: "mola-detayi" },
+      { href: "/zaman-takip",  label: "Zaman Takip",     icon: "zaman-takip" },
+      { href: "/log",          label: "Geçiş Kayıtları", icon: "log" },
+      { href: "/izinler",      label: "İzinler",         icon: "izinler" },
+    ],
+  },
+  {
+    baslik: "Denetim",
+    items: [
+      { href: "/pdks-alarm",   label: "PDKS Alarm",      icon: "pdks-alarm" },
+      { href: "/buddy-punch",  label: "Buddy Punch",     icon: "buddy-punch" },
+      { href: "/duzeltmeler",  label: "Düzeltmeler",     icon: "duzeltmeler" },
+    ],
+  },
+  {
+    baslik: "Yönetim",
+    items: [
+      { href: "/takimlar",          label: "Takımlar",          icon: "takimlar" },
+      { href: "/kapi-ayarlari",     label: "Kapı Ayarları",     icon: "kapi-ayarlari",     adminOnly: true },
+      { href: "/personel",          label: "Personel",          icon: "personel",          adminOnly: true },
+      { href: "/zoho-kullanicilar", label: "Zoho Kullanıcılar", icon: "zoho-kullanicilar", adminOnly: true },
+      { href: "/senkronizasyon",    label: "Senkronizasyon",    icon: "senkronizasyon",    adminOnly: true },
+    ],
+  },
 ];
+
+/** Genişlet/daralt oku — <html data-sidebar> yazar, gerisini CSS halleder. */
+function DaraltDugmesi() {
+  const mini = useHtmlAttr("data-sidebar", "full") === "mini";
+
+  function degistir() {
+    document.documentElement.setAttribute("data-sidebar", mini ? "full" : "mini");
+    try {
+      localStorage.setItem("pdks-sidebar", mini ? "full" : "mini");
+    } catch {
+      // Gizli sekmede yazılamaz — menü yine daralır, yalnızca kalıcı olmaz.
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={degistir}
+      title={mini ? "Menüyü genişlet" : "Menüyü daralt"}
+      aria-label={mini ? "Menüyü genişlet" : "Menüyü daralt"}
+      className="btn-icon shrink-0"
+      style={{ width: 26, height: 26 }}
+    >
+      <svg
+        width="13"
+        height="13"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden
+        style={{
+          transform: mini ? "rotate(180deg)" : "none",
+          transition: "transform 0.28s var(--ease)",
+        }}
+      >
+        <path d="M15 19l-7-7 7-7" />
+      </svg>
+    </button>
+  );
+}
 
 export default function Sidebar({
   role,
@@ -216,194 +283,184 @@ export default function Sidebar({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const [cikisYapiliyor, setCikisYapiliyor] = useState(false);
 
+  // Dönem seçimi sayfalar arasında korunmalı — aksi hâlde her menü
+  // tıklamasında kullanıcı seçtiği tarih aralığını kaybederdi.
   const qs = searchParams.toString();
   const suffix = qs ? `?${qs}` : "";
 
-  const items = NAV_ITEMS.filter((i) => !i.adminOnly || role === "admin");
+  const gruplar = NAV_GROUPS.map((g) => ({
+    ...g,
+    items: g.items.filter((i) => !i.adminOnly || role === "admin"),
+  })).filter((g) => g.items.length > 0);
 
   async function logout() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/login");
-    router.refresh();
+    setCikisYapiliyor(true);
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      router.push("/login");
+      router.refresh();
+    } finally {
+      setCikisYapiliyor(false);
+    }
   }
 
   return (
     <aside
-      className="flex w-[220px] shrink-0 flex-col relative"
+      className="app-sidebar glass sticky top-0 flex h-screen shrink-0 flex-col"
       style={{
-        background: "rgba(5,9,26,0.80)",
-        backdropFilter: "blur(28px) saturate(160%)",
-        WebkitBackdropFilter: "blur(28px) saturate(160%)",
-        borderRight: "1px solid rgba(255,255,255,0.085)",
+        background: "var(--sf-1)",
+        borderRight: "1px solid var(--edge-soft)",
+        borderTop: 0,
+        borderLeft: 0,
+        borderBottom: 0,
       }}
     >
-      {/* Sağ kenar parıltısı — tek pikselde gradient ışık */}
+      {/* ── Logo + daralt oku ── */}
       <div
-        aria-hidden
-        className="pointer-events-none absolute inset-y-0 right-0 w-px"
-        style={{
-          background:
-            "linear-gradient(180deg, rgba(56,189,248,0.35) 0%, rgba(56,189,248,0.05) 30%, transparent 60%, rgba(6,214,160,0.20) 100%)",
-        }}
-      />
-
-      {/* Logo alanı */}
-      <div
-        className="px-5 py-[18px]"
-        style={{ borderBottom: "1px solid rgba(255,255,255,0.065)" }}
+        className="sb-pad flex items-center gap-2.5 px-4 py-3.5"
+        style={{ borderBottom: "1px solid var(--edge-soft)" }}
       >
-        <div className="flex items-center gap-3">
-          {/* Logo ikonu */}
-          <div
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl"
-            style={{
-              background:
-                "linear-gradient(135deg, rgba(56,189,248,0.22), rgba(6,214,160,0.18))",
-              border: "1px solid rgba(56,189,248,0.32)",
-              boxShadow: "0 2px 12px rgba(56,189,248,0.20)",
-            }}
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
-              <path
-                d="M12 2L3 7v10l9 5 9-5V7L12 2z"
-                stroke="#38bdf8"
-                strokeWidth="1.7"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M12 7v10M7 9.5l5 2.5 5-2.5"
-                stroke="#06d6a0"
-                strokeWidth="1.4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+        <div
+          className="flex h-8 w-8 shrink-0 items-center justify-center"
+          style={{
+            borderRadius: "var(--r-btn)",
+            background: "var(--ac-sky-dim)",
+            border: "1px solid var(--ac-sky-edge)",
+            boxShadow: "var(--sheen)",
+          }}
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <path d="M12 2L3 7v10l9 5 9-5V7L12 2z" stroke="var(--ac-sky)" strokeWidth="1.7" strokeLinejoin="round" />
+            <path d="M12 7v10M7 9.5l5 2.5 5-2.5" stroke="var(--ac-cyan)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </div>
+
+        <div className="sb-full-only min-w-0 flex-1">
+          <div className="truncate text-[13px] font-semibold leading-tight" style={{ color: "var(--tx-primary)" }}>
+            PDKS Pro
           </div>
-          <div>
-            <div
-              className="text-sm font-semibold tracking-tight leading-tight"
-              style={{ color: "var(--ac-sky)" }}
-            >
-              PDKS Pro
-            </div>
-            <div className="text-[10px] leading-tight mt-0.5" style={{ color: "var(--tx-muted)" }}>
-              Natural Clinic
-            </div>
+          <div className="truncate text-[10px] leading-tight" style={{ color: "var(--tx-secondary)" }}>
+            Natural Clinic
           </div>
         </div>
+
+        <span className="sb-full-only">
+          <DaraltDugmesi />
+        </span>
       </div>
 
-      {/* Navigasyon */}
-      <nav className="flex-1 overflow-y-auto py-2.5 px-2.5" aria-label="Ana menü">
-        {items.map((item) => {
-          const active = pathname === item.href;
-          return (
-            <Link
-              key={item.href}
-              href={`${item.href}${suffix}`}
-              className="relative flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] mb-0.5 group"
-              style={
-                active
-                  ? {
-                      background:
-                        "linear-gradient(135deg, rgba(56,189,248,0.16), rgba(6,214,160,0.10))",
-                      border: "1px solid rgba(56,189,248,0.24)",
-                      color: "#dff3ff",
-                      fontWeight: 500,
-                    }
-                  : {
-                      background: "transparent",
-                      border: "1px solid transparent",
-                      color: "var(--tx-secondary)",
-                    }
-              }
+      {/* Mini modda daralt oku kendi satırında ortalanır */}
+      <div
+        className="sb-mini-only justify-center px-2 py-2"
+        style={{ borderBottom: "1px solid var(--edge-soft)" }}
+      >
+        <DaraltDugmesi />
+      </div>
+
+      {/* ── Navigasyon ── */}
+      <nav className="sb-pad flex-1 overflow-y-auto overflow-x-hidden px-2.5 py-3" aria-label="Ana menü">
+        {gruplar.map((grup, gi) => (
+          <div key={grup.baslik} className={gi > 0 ? "mt-4" : undefined}>
+            <div
+              className="sb-full-only px-2 pb-1.5 text-[9.5px] font-bold uppercase tracking-[0.1em]"
+              style={{ color: "var(--tx-muted)" }}
             >
-              {/* Sol accent bar — aktifse görünür */}
-              {active && (
-                <span
-                  aria-hidden
-                  className="absolute left-0 top-1/2 -translate-y-1/2 rounded-r-full"
-                  style={{
-                    width: 3,
-                    height: 20,
-                    background: "linear-gradient(180deg, var(--ac-sky), var(--ac-cyan))",
-                    boxShadow: "0 0 8px rgba(56,189,248,0.5)",
-                  }}
-                />
-              )}
+              {grup.baslik}
+            </div>
+            {/* Mini modda başlık yerine ince ayraç — gruplar yine ayrışsın */}
+            {gi > 0 && (
+              <div
+                aria-hidden
+                className="sb-mini-only mx-auto mb-2"
+                style={{ width: 20, height: 1, background: "var(--edge-soft)" }}
+              />
+            )}
 
-              {/* İkon */}
-              <span
-                className="shrink-0 transition-colors duration-150"
-                style={{ color: active ? "var(--ac-sky)" : "var(--tx-muted)" }}
-              >
-                <NavIcon name={item.icon} />
-              </span>
-
-              <span className="truncate">{item.label}</span>
-
-              {/* Sağdaki aktif nokta */}
-              {active && (
-                <span
-                  aria-hidden
-                  className="ml-auto h-1.5 w-1.5 rounded-full shrink-0"
-                  style={{
-                    background: "var(--ac-sky)",
-                    boxShadow: "0 0 6px var(--ac-sky-glow)",
-                  }}
-                />
-              )}
-
-              <LinkPending />
-            </Link>
-          );
-        })}
+            <div className="flex flex-col gap-0.5">
+              {grup.items.map((item) => {
+                const active = pathname === item.href;
+                return (
+                  <Link
+                    key={item.href}
+                    href={`${item.href}${suffix}`}
+                    title={item.label}
+                    aria-current={active ? "page" : undefined}
+                    className={`sb-nav-item sb-row ${active ? "sb-on" : ""}`}
+                  >
+                    <span className="shrink-0">
+                      <NavIcon name={item.icon} />
+                    </span>
+                    <span className="sb-full-only truncate">{item.label}</span>
+                    <LinkPending />
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
-      {/* Kullanıcı bölgesi */}
-      <div
-        className="px-3.5 py-4"
-        style={{ borderTop: "1px solid rgba(255,255,255,0.065)" }}
-      >
-        <div className="mb-3 flex items-center gap-2.5">
-          {/* Avatar */}
+      {/* ── Alt blok: kullanıcı · tema · çıkış ── */}
+      <div className="sb-pad px-3 py-3" style={{ borderTop: "1px solid var(--edge-soft)" }}>
+        <div className="sb-row mb-2.5 flex items-center gap-2.5">
           <div
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
+            className="flex h-8 w-8 shrink-0 items-center justify-center text-xs font-bold"
             style={{
-              background: "rgba(56,189,248,0.14)",
+              borderRadius: "var(--r-pill)",
+              background: "var(--ac-sky-dim)",
               color: "var(--ac-sky)",
-              border: "1.5px solid rgba(56,189,248,0.28)",
-              boxShadow: "0 0 12px rgba(56,189,248,0.15)",
+              border: "1px solid var(--ac-sky-edge)",
             }}
           >
-            {username.charAt(0).toUpperCase()}
+            {username.charAt(0).toLocaleUpperCase("tr-TR")}
           </div>
-          <div className="min-w-0">
-            <div
-              className="truncate text-xs font-medium"
-              style={{ color: "var(--tx-primary)" }}
-            >
+          <div className="sb-full-only min-w-0">
+            <div className="truncate text-xs font-semibold" style={{ color: "var(--tx-primary)" }}>
               {username}
             </div>
-            <div className="text-[10px] mt-0.5" style={{ color: "var(--tx-muted)" }}>
+            <div className="truncate text-[10px]" style={{ color: "var(--tx-secondary)" }}>
               {role === "admin" ? "Yönetici" : "Takım Lideri"}
             </div>
           </div>
         </div>
 
-        <button
-          onClick={logout}
-          className="btn-danger-ghost w-full py-1.5 text-xs font-medium flex items-center justify-center gap-1.5"
-        >
-          {/* Logout icon */}
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-            <polyline points="16 17 21 12 16 7"/>
-            <line x1="21" y1="12" x2="9" y2="12"/>
-          </svg>
-          Çıkış Yap
-        </button>
+        {/* Full: tam genişlik düğmeler alt alta */}
+        <div className="sb-full-only flex flex-col gap-1.5">
+          <ThemeToggle />
+          <button
+            onClick={logout}
+            disabled={cikisYapiliyor}
+            className="btn-danger-ghost flex w-full items-center justify-center gap-1.5 text-xs font-medium"
+            style={{ height: 32 }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            {cikisYapiliyor ? "Çıkılıyor…" : "Çıkış Yap"}
+          </button>
+        </div>
+
+        {/* Mini: yalnızca ikonlar, alt alta ortalı */}
+        <div className="sb-mini-only flex-col items-center gap-1.5">
+          <ThemeToggle mini />
+          <button
+            onClick={logout}
+            disabled={cikisYapiliyor}
+            title="Çıkış Yap"
+            aria-label="Çıkış Yap"
+            className="btn-icon"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+          </button>
+        </div>
       </div>
     </aside>
   );

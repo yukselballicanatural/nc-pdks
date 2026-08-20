@@ -275,7 +275,7 @@ export default function OzetTable({
         ]}
         onRowClick={(r) => setDetay(r)}
         rowClass={(r) =>
-          r.turnikeKaydi === 0 ? "opacity-60" : r.gelinenGun === 0 ? "bg-red-950/20" : ""
+          r.turnikeKaydi === 0 ? "row-mute" : r.gelinenGun === 0 ? "row-danger" : ""
         }
       />
 
