@@ -114,14 +114,15 @@ export default function LiveSync({ baslangicSurumu }: { baslangicSurumu: string 
     };
   }, [kontrolEt]);
 
+  // Renkler token: açık temada da okunur tonlara dönüşür.
   const renk =
     durum === "hata"
-      ? "#f87171"
+      ? "var(--cl-danger)"
       : durum === "yeni"
-        ? "#34d399"
+        ? "var(--cl-ok)"
         : durum === "kontrol"
-          ? "#38bdf8"
-          : "#06d6a0";
+          ? "var(--ac-sky)"
+          : "var(--ac-cyan)";
 
   const metin =
     durum === "hata"
@@ -138,10 +139,15 @@ export default function LiveSync({ baslangicSurumu }: { baslangicSurumu: string 
 
   return (
     <div
-      className="pointer-events-none fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-medium tabular-nums backdrop-blur transition-all"
+      className="pointer-events-none fixed bottom-4 right-4 flex items-center gap-2 px-3 py-1.5 text-[11px] font-medium tabular-nums transition-all"
       style={{
-        background: "rgba(5,9,26,0.82)",
-        border: `1px solid ${renk}44`,
+        zIndex: 150,
+        borderRadius: "var(--r-pill)",
+        background: "var(--sf-strong)",
+        backdropFilter: "blur(18px) saturate(170%)",
+        WebkitBackdropFilter: "blur(18px) saturate(170%)",
+        border: "1px solid var(--edge-soft)",
+        boxShadow: "var(--sh-1)",
         color: "var(--tx-secondary)",
       }}
       title={
@@ -152,7 +158,7 @@ export default function LiveSync({ baslangicSurumu }: { baslangicSurumu: string 
     >
       <span
         className={`inline-block h-1.5 w-1.5 rounded-full${durum === "kontrol" ? " animate-pulse" : ""}`}
-        style={{ background: renk, boxShadow: `0 0 6px ${renk}` }}
+        style={{ background: renk, boxShadow: `0 0 7px ${renk}` }}
       />
       {metin}
     </div>

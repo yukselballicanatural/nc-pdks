@@ -12,6 +12,7 @@
 //
 // Shader'ın random() fonksiyonu birebir taşındı ki desen aynı karakterde olsun.
 import { useEffect, useRef } from "react";
+import { useHtmlAttr } from "@/lib/ui/useHtmlAttr";
 
 /** Hücre boyu ve nokta boyu (CSS pikseli) — shader'daki u_total_size / u_dot_size. */
 const IZGARA = 20;
@@ -56,6 +57,10 @@ function rastgele(x: number, y: number): number {
 
 export default function DotMatrixBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  // Noktalar eskiden sabit beyazdı; açık temada zemin de açık olduğu için
+  // tamamen görünmez oluyordu. Renk artık temaya göre seçiliyor ve tema
+  // değişince efekt yeniden çiziliyor (tema effect bağımlılığında).
+  const tema = useHtmlAttr("data-theme", "dark");
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -91,7 +96,7 @@ export default function DotMatrixBackground() {
       const w = canvas.width / dpr;
       const h = canvas.height / dpr;
       ctx.clearRect(0, 0, w, h);
-      ctx.fillStyle = "#ffffff";
+      ctx.fillStyle = tema === "light" ? "rgba(23, 43, 99, 0.42)" : "#ffffff";
 
       const merkezX = sutun / 2;
       const merkezY = satir / 2;
@@ -165,7 +170,7 @@ export default function DotMatrixBackground() {
       cancelAnimationFrame(kareId);
       window.removeEventListener("resize", olcekle);
     };
-  }, []);
+  }, [tema]);
 
   return (
     <canvas

@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import Notice, { Vurgu } from "@/components/ui/Notice";
 
 interface SyncStatus {
   lastSourceId: number;
@@ -95,19 +96,19 @@ export default function SyncPanel({
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="glass-card p-4">
-          <div className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--tx-muted)" }}>
+          <div className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--tx-secondary)" }}>
             Durum
           </div>
           <div className="mt-2 text-lg font-semibold">
             {status.rebuilding ? (
-              <span style={{ color: "var(--cl-warning, #fbbf24)" }}>Yeniden hesaplama yarıda</span>
+              <span className="pill pill-warn">Yeniden hesaplama yarıda</span>
             ) : status.stale ? (
-              <span style={{ color: "var(--cl-warning, #fbbf24)" }}>Güncelleme bekliyor</span>
+              <span className="pill pill-warn">Güncelleme bekliyor</span>
             ) : (
-              <span style={{ color: "var(--cl-success, #34d399)" }}>Güncel</span>
+              <span className="pill pill-ok">Güncel</span>
             )}
           </div>
-          <div className="mt-1 text-xs" style={{ color: "var(--tx-secondary)" }}>
+          <div className="mt-1 text-[11px]" style={{ color: "var(--tx-secondary)" }}>
             {status.lastSyncAt
               ? `Son senkronizasyon: ${new Date(status.lastSyncAt).toLocaleString("tr-TR")}`
               : "Henüz hiç senkronize edilmedi"}
@@ -115,19 +116,19 @@ export default function SyncPanel({
         </div>
 
         <div className="glass-card p-4">
-          <div className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--tx-muted)" }}>
+          <div className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--tx-secondary)" }}>
             İşlenmemiş Kayıt
           </div>
           <div className="mt-2 text-lg font-semibold tabular-nums">
             {bekleyen.toLocaleString("tr-TR")}
           </div>
-          <div className="mt-1 text-xs" style={{ color: "var(--tx-secondary)" }}>
+          <div className="mt-1 text-[11px]" style={{ color: "var(--tx-secondary)" }}>
             Kaynakta en son kayıt no: {status.currentMaxSourceId.toLocaleString("tr-TR")}
           </div>
         </div>
 
         <div className="glass-card p-4">
-          <div className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--tx-muted)" }}>
+          <div className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--tx-secondary)" }}>
             Son İşlem
           </div>
           <div className="mt-2 text-sm" style={{ color: "var(--tx-secondary)" }}>
@@ -137,42 +138,27 @@ export default function SyncPanel({
       </div>
 
       {health.eksikler.length > 0 ? (
-        <div
-          className="rounded-xl p-4 text-xs leading-relaxed"
-          style={{
-            background: "rgba(248,113,113,0.1)",
-            border: "1px solid rgba(248,113,113,0.28)",
-            color: "var(--tx-secondary)",
-          }}
-        >
-          <div className="mb-1.5 text-sm font-semibold" style={{ color: "var(--cl-danger)" }}>
-            Otomatik senkronizasyon çalışamıyor — veritabanı kurulumu eksik
-          </div>
-          <ul className="mt-2 list-inside list-disc space-y-1">
+        <Notice ton="danger" baslik="Otomatik senkronizasyon çalışamıyor — veritabanı kurulumu eksik">
+          <ul className="list-inside list-disc space-y-1">
             {health.eksikler.map((e) => (
               <li key={e}>{e}</li>
             ))}
           </ul>
-          <p className="mt-2" style={{ color: "var(--tx-muted)" }}>
+          <p className="mt-2">
             Bu adımlar tamamlanana kadar aşağıdaki düğmelerle elle senkronize edebilirsiniz;
             hesaplama doğru çalışır, yalnızca otomatik tetikleme devre dışıdır.
           </p>
-        </div>
+        </Notice>
       ) : null}
 
-      <div
-        className="rounded-xl p-4 text-xs leading-relaxed"
-        style={{
-          background: "rgba(6,214,160,0.08)",
-          border: "1px solid rgba(6,214,160,0.22)",
-          color: "var(--tx-secondary)",
-        }}
-      >
-        <div className="mb-1.5 text-sm font-semibold" style={{ color: "var(--ac-cyan)" }}>
-          {health.eksikler.length === 0
+      <Notice
+        ton="ok"
+        baslik={
+          health.eksikler.length === 0
             ? "Otomatik çalışıyor — elle bir şey yapmanız gerekmiyor"
-            : "Otomatik çalışma nasıl işler"}
-        </div>
+            : "Otomatik çalışma nasıl işler"
+        }
+      >
         Yeni bir turnike geçişi veya mola/klinik/toplantı bildirimi Supabase&apos;e
         yazıldığı anda <span style={{ color: "var(--tx-primary)" }}>Supabase&apos;in kendisi
         haber verip</span> sistem etkilenen günü hesaplayıp üstüne ekliyor — bekleme yok.
@@ -194,22 +180,18 @@ export default function SyncPanel({
         )}
         <br />
         <br />
-        Aşağıdaki düğmelere yalnızca <span style={{ color: "var(--tx-primary)" }}>beklemek
-        istemediğinizde</span> ya da Kapı Ayarları&apos;nı değiştirdikten sonra hemen sonuç
-        görmek istediğinizde ihtiyaç duyarsınız.
-      </div>
+        Aşağıdaki düğmelere yalnızca <Vurgu>beklemek istemediğinizde</Vurgu> ya da Kapı
+        Ayarları&apos;nı değiştirdikten sonra hemen sonuç görmek istediğinizde ihtiyaç duyarsınız.
+      </Notice>
 
       <div className="glass-card p-4">
         <div className="mb-3 text-sm font-medium">Elle Tetikleme (isteğe bağlı)</div>
-        <div className="flex flex-wrap gap-2">
+        <div className="nc-toolbar">
           <button
             onClick={() => sync(false)}
             disabled={running}
-            className="rounded-xl px-4 py-2 text-sm font-semibold transition-all disabled:opacity-50"
-            style={{
-              background: "linear-gradient(135deg, #38bdf8, #06d6a0)",
-              color: "#06091a",
-            }}
+            className="btn-base btn-primary px-4"
+            style={{ height: 34 }}
           >
             {running ? "Çalışıyor…" : "Şimdi Kontrol Et"}
           </button>
@@ -223,17 +205,13 @@ export default function SyncPanel({
                 sync(true);
             }}
             disabled={running}
-            className="rounded-xl px-4 py-2 text-sm transition-all disabled:opacity-50"
-            style={{
-              background: "rgba(255,255,255,0.05)",
-              border: "1px solid rgba(255,255,255,0.12)",
-              color: "var(--tx-secondary)",
-            }}
+            className="btn-base btn-ghost px-4"
+            style={{ height: 34 }}
           >
             Tümünü Yeniden Hesapla
           </button>
         </div>
-        <p className="mt-3 text-xs leading-relaxed" style={{ color: "var(--tx-muted)" }}>
+        <p className="mt-3 text-[11px] leading-relaxed" style={{ color: "var(--tx-secondary)" }}>
           <strong style={{ color: "var(--tx-secondary)" }}>Şimdi Kontrol Et:</strong> otomatiğin
           bir sonraki turunu beklemeden yeni kayıtları işler — saniyeler sürer.
           <br />
@@ -245,16 +223,7 @@ export default function SyncPanel({
       </div>
 
       {error && (
-        <div
-          className="rounded-xl p-3 text-sm"
-          style={{
-            background: "rgba(248,113,113,0.1)",
-            border: "1px solid rgba(248,113,113,0.25)",
-            color: "var(--cl-danger, #f87171)",
-          }}
-        >
-          {error}
-        </div>
+        <Notice ton="danger">{error}</Notice>
       )}
 
       {log.length > 0 && (

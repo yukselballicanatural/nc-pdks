@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import DataTable, { type Column } from "@/components/ui/DataTable";
+import Notice, { Vurgu } from "@/components/ui/Notice";
 
 export interface ZohoRow {
   key: string;
@@ -44,7 +45,7 @@ export default function ZohoTable({ rows }: { rows: ZohoRow[] }) {
     {
       key: "orig",
       header: "Gerçek Ad",
-      cell: (r) => <span className="text-slate-400">{r.originalAgentName || "-"}</span>,
+      cell: (r) => <span style={{ color: "var(--tx-secondary)" }}>{r.originalAgentName || "-"}</span>,
       sortValue: (r) => r.originalAgentName,
     },
     {
@@ -55,7 +56,7 @@ export default function ZohoTable({ rows }: { rows: ZohoRow[] }) {
         r.employmentNo ? (
           <span className="tabular-nums">{r.employmentNo}</span>
         ) : (
-          <span className="rounded bg-red-500/10 px-1.5 py-0.5 text-xs text-red-300">Eksik</span>
+          <span className="pill pill-danger">Eksik</span>
         ),
       sortValue: (r) => Number(r.employmentNo) || 9e15,
     },
@@ -65,22 +66,22 @@ export default function ZohoTable({ rows }: { rows: ZohoRow[] }) {
       align: "center",
       cell: (r) =>
         r.pdksVar ? (
-          <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-xs text-emerald-300">Var</span>
+          <span className="pill pill-ok">Var</span>
         ) : (
-          <span className="text-slate-600">-</span>
+          <span style={{ color: "var(--tx-disabled)" }}>-</span>
         ),
       sortValue: (r) => (r.pdksVar ? 0 : 1),
     },
-    { key: "role", header: "Rol / Takım", cell: (r) => <span className="text-slate-400">{r.role || "-"}</span>, sortValue: (r) => r.role },
-    { key: "email", header: "E-posta", cell: (r) => <span className="text-xs text-slate-500">{r.email || "-"}</span>, sortValue: (r) => r.email },
+    { key: "role", header: "Rol / Takım", cell: (r) => <span style={{ color: "var(--tx-secondary)" }}>{r.role || "-"}</span>, sortValue: (r) => r.role },
+    { key: "email", header: "E-posta", cell: (r) => <span className="cell-code">{r.email || "-"}</span>, sortValue: (r) => r.email },
     {
       key: "start",
       header: "İşe Giriş",
       align: "center",
-      cell: (r) => <span className="text-slate-400">{r.startDate ?? "-"}</span>,
+      cell: (r) => <span className="tabular-nums" style={{ color: "var(--tx-secondary)" }}>{r.startDate ?? "-"}</span>,
       sortValue: (r) => r.startDate ?? "",
     },
-    { key: "sen", header: "Kıdem", align: "center", cell: (r) => <span className="text-slate-400">{r.seniority || "-"}</span>, sortValue: (r) => r.seniority },
+    { key: "sen", header: "Kıdem", align: "center", cell: (r) => <span style={{ color: "var(--tx-secondary)" }}>{r.seniority || "-"}</span>, sortValue: (r) => r.seniority },
     {
       key: "status",
       header: "Durum",
@@ -88,7 +89,7 @@ export default function ZohoTable({ rows }: { rows: ZohoRow[] }) {
       cell: (r) => (
         <span
           className={`rounded px-1.5 py-0.5 text-xs ${
-            r.status === "active" ? "bg-emerald-500/10 text-emerald-300" : "bg-slate-700/40 text-slate-500"
+            r.status === "active" ? "pill-ok" : "pill-mute"
           }`}
         >
           {r.status === "active" ? "Aktif" : r.status || "-"}
@@ -100,12 +101,14 @@ export default function ZohoTable({ rows }: { rows: ZohoRow[] }) {
 
   return (
     <>
-      <div className="mb-4 rounded-lg border border-slate-800 bg-slate-900/40 p-3 text-xs text-slate-400">
-        Bu liste <span className="text-slate-300">zoho_users</span> tablosundan salt-okunur gelir.
-        <span className="text-amber-300"> Sicil (Employment No) eksik olan kayıtlar</span> PDKS
-        verisiyle sadece isim üzerinden eşleşebilir — Zoho CRM&apos;de bu alanı doldurmak eşleşmeyi
-        kesinleştirir.
-      </div>
+      <Notice ton="info" className="mb-4">
+        Bu liste <Vurgu>zoho_users</Vurgu> tablosundan salt-okunur gelir.{" "}
+        <span style={{ color: "var(--cl-warn)", fontWeight: 600 }}>
+          Sicil (Employment No) eksik olan kayıtlar
+        </span>{" "}
+        PDKS verisiyle sadece isim üzerinden eşleşebilir — Zoho CRM&apos;de bu alanı doldurmak
+        eşleşmeyi kesinleştirir.
+      </Notice>
       <DataTable
         rows={filtered}
         columns={columns}

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import DataTable, { type Column } from "@/components/ui/DataTable";
+import Notice, { Vurgu } from "@/components/ui/Notice";
 import { setReaderAreaAction } from "@/app/actions/readerRules";
 import type { ReaderArea } from "@/lib/engine/types";
 
@@ -43,7 +44,17 @@ export default function KapiAyarlariTable({ rows }: { rows: KapiRow[] }) {
       header: "Algılanan Yön",
       align: "center",
       cell: (r) => (
-        <span className={r.yon === "Giriş" ? "text-teal-300" : r.yon === "Çıkış" ? "text-orange-300" : "text-red-400"}>
+        <span
+          style={{
+            color:
+              r.yon === "Giriş"
+                ? "var(--cl-ok)"
+                : r.yon === "Çıkış"
+                  ? "var(--cl-warn)"
+                  : "var(--cl-danger)",
+            fontWeight: 600,
+          }}
+        >
           {r.yon === "-" ? "Belirsiz" : r.yon}
         </span>
       ),
@@ -53,7 +64,11 @@ export default function KapiAyarlariTable({ rows }: { rows: KapiRow[] }) {
       key: "kayit",
       header: "Kayıt Sayısı",
       align: "right",
-      cell: (r) => <span className="text-slate-400">{r.kayitSayisi.toLocaleString("tr-TR")}</span>,
+      cell: (r) => (
+        <span className="tabular-nums" style={{ color: "var(--tx-secondary)" }}>
+          {r.kayitSayisi.toLocaleString("tr-TR")}
+        </span>
+      ),
       sortValue: (r) => r.kayitSayisi,
     },
     {
@@ -64,7 +79,9 @@ export default function KapiAyarlariTable({ rows }: { rows: KapiRow[] }) {
           value={r.ozelKural ? r.alan : "default"}
           disabled={pending && busy === r.okuyucu}
           onChange={(e) => change(r, e.target.value)}
-          className="rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-xs text-slate-100 outline-none focus:border-teal-500 disabled:opacity-50"
+          aria-label={`${r.okuyucu} alan sınıfı`}
+          className="input-glass px-2 text-[11px] disabled:opacity-50"
+          style={{ height: 28, boxSizing: "border-box" }}
         >
           <option value="default">Varsayılan ({ALAN_LABEL[r.alan]})</option>
           <option value="work">{ALAN_LABEL.work}</option>
@@ -80,16 +97,13 @@ export default function KapiAyarlariTable({ rows }: { rows: KapiRow[] }) {
       align: "center",
       cell: (r) => (
         <span
-          className={`rounded px-1.5 py-0.5 text-xs ${
-            r.alan === "work"
-              ? "bg-emerald-500/10 text-emerald-300"
-              : r.alan === "ignore"
-                ? "bg-slate-700/50 text-slate-500"
-                : "bg-amber-500/10 text-amber-300"
+          className={`pill ${
+            r.alan === "work" ? "pill-ok" : r.alan === "ignore" ? "pill-mute" : "pill-warn"
           }`}
+          title={r.ozelKural ? "Bu okuyucu için elle özel kural tanımlı" : undefined}
         >
           {r.alan === "work" ? "Çalışma" : r.alan === "ignore" ? "Yoksayılan" : "Mola/Dışı"}
-          {r.ozelKural && <span className="ml-1 opacity-70">•</span>}
+          {r.ozelKural && <span aria-hidden style={{ opacity: 0.7 }}>•</span>}
         </span>
       ),
       sortValue: (r) => r.alan,
@@ -98,27 +112,32 @@ export default function KapiAyarlariTable({ rows }: { rows: KapiRow[] }) {
 
   return (
     <>
-      {error && <p className="mb-3 rounded border border-red-500/40 bg-red-500/10 p-2 text-sm text-red-300">{error}</p>}
-      <div className="mb-4 rounded-lg border border-slate-800 bg-slate-900/40 p-3 text-xs text-slate-400">
-        <div className="mb-1 font-medium text-slate-300">Alan sınıfları hesaplamayı nasıl etkiler?</div>
-        <ul className="space-y-0.5">
+      {error && (
+        <Notice ton="danger" className="mb-3">
+          {error}
+        </Notice>
+      )}
+
+      <Notice ton="info" baslik="Alan sınıfları hesaplamayı nasıl etkiler?" className="mb-4">
+        <ul className="space-y-1">
           <li>
-            <span className="text-emerald-300">Çalışma Alanı</span> — giriş/çıkış çiftleri net
-            çalışma süresini oluşturur. Varsayılan olarak adında &quot;Turnike&quot; geçen okuyucular.
+            <span className="pill pill-ok">Çalışma Alanı</span> — giriş/çıkış çiftleri net çalışma
+            süresini oluşturur. Varsayılan olarak adında &quot;Turnike&quot; geçen okuyucular.
           </li>
           <li>
-            <span className="text-amber-300">Mola / Turnike Dışı</span> — net çalışmaya sayılmaz,
+            <span className="pill pill-warn">Mola / Turnike Dışı</span> — net çalışmaya sayılmaz,
             Mola Detayı sayfasında ayrı gösterilir.
           </li>
           <li>
-            <span className="text-slate-400">Hesaplamaya Katmama</span> — kayıt tamamen yok sayılır
+            <span className="pill pill-mute">Hesaplamaya Katmama</span> — kayıt tamamen yok sayılır
             (ilk giriş / son çıkış hesabına bile girmez).
           </li>
-          <li className="pt-1 text-slate-500">
-            • işareti: bu okuyucu için elle özel kural tanımlanmış (varsayılandan farklı olabilir).
+          <li style={{ color: "var(--tx-secondary)" }}>
+            <Vurgu>•</Vurgu> işareti: bu okuyucu için elle özel kural tanımlanmış (varsayılandan
+            farklı olabilir).
           </li>
         </ul>
-      </div>
+      </Notice>
       <DataTable
         rows={rows}
         columns={columns}

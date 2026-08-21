@@ -1,6 +1,7 @@
 import { loadPdksData } from "@/lib/data/loadPdks";
 import { loadTrackerLog } from "@/lib/data/loadTrackerLog";
 import PageHeader from "@/components/ui/PageHeader";
+import Notice, { Vurgu } from "@/components/ui/Notice";
 import ZamanTakipTable from "@/components/zamanTakip/ZamanTakipTable";
 import type { TrackerLogRow } from "@/lib/data/loadTrackerLog";
 
@@ -36,50 +37,27 @@ export default async function ZamanTakipPage({
       />
       <div className="p-6">
         {log.hata ? (
-          <div
-            className="mb-3 rounded-xl p-3 text-xs leading-relaxed"
-            style={{
-              background: "rgba(248,113,113,0.1)",
-              border: "1px solid rgba(248,113,113,0.28)",
-              color: "var(--tx-secondary)",
-            }}
-          >
-            <strong style={{ color: "var(--cl-danger)" }}>Zaman takip verisi okunamadı:</strong>{" "}
+          <Notice ton="danger" baslik="Zaman takip verisi okunamadı" className="mb-3">
             {log.hata}
-          </div>
+          </Notice>
         ) : !log.kullanilabilir ? (
-          <div
-            className="mb-3 rounded-xl p-3 text-xs leading-relaxed"
-            style={{
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.1)",
-              color: "var(--tx-secondary)",
-            }}
-          >
+          <Notice ton="info" className="mb-3">
             Bu dönemde hiç zaman takip kaydı yok.
-          </div>
+          </Notice>
         ) : (
-          <div
-            className="mb-3 rounded-xl p-3 text-xs leading-relaxed"
-            style={{
-              background: "rgba(6,214,160,0.07)",
-              border: "1px solid rgba(6,214,160,0.2)",
-              color: "var(--tx-secondary)",
-            }}
-          >
-            Dönemde <span style={{ color: "var(--tx-primary)" }}>{log.olaySayisi}</span> ham olay
-            okundu, <span style={{ color: "var(--tx-primary)" }}>{rows.length}</span> oturuma
-            dönüştürüldü.
+          <Notice ton="ok" className="mb-3">
+            Dönemde <Vurgu>{log.olaySayisi}</Vurgu> ham olay okundu, <Vurgu>{rows.length}</Vurgu>{" "}
+            oturuma dönüştürüldü.
             {log.eslesmeyenOlay > 0 && (
               <>
                 {" "}
-                <span style={{ color: "var(--cl-warn)" }}>
+                <span style={{ color: "var(--cl-warn)", fontWeight: 600 }}>
                   {log.eslesmeyenOlay} olay hiçbir sicile bağlanamadı
                 </span>
                 .
               </>
             )}
-          </div>
+          </Notice>
         )}
         <ZamanTakipTable rows={rows} />
       </div>

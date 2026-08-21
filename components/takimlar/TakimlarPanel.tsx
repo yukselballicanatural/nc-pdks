@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import Notice, { Vurgu } from "@/components/ui/Notice";
 import type { TeamMember, TeamView, UyelikKaynagi } from "@/lib/teams/loadTeams";
 import {
   createTeamAction,
@@ -19,12 +20,12 @@ type Run = (fn: () => Promise<ActionResult>) => void;
 /* ── küçük görsel parçalar ── */
 
 const TONES = {
-  ok: ["rgba(52,211,153,0.12)", "rgba(52,211,153,0.3)", "#34d399"],
-  warn: ["rgba(251,191,36,0.12)", "rgba(251,191,36,0.3)", "#fbbf24"],
-  danger: ["rgba(248,113,113,0.12)", "rgba(248,113,113,0.3)", "#f87171"],
-  info: ["rgba(56,189,248,0.12)", "rgba(56,189,248,0.3)", "#38bdf8"],
-  violet: ["rgba(167,139,250,0.12)", "rgba(167,139,250,0.3)", "#a78bfa"],
-  muted: ["rgba(255,255,255,0.05)", "rgba(255,255,255,0.1)", "var(--tx-muted)"],
+  ok: "pill-ok",
+  warn: "pill-warn",
+  danger: "pill-danger",
+  info: "pill-sky",
+  violet: "pill-violet",
+  muted: "pill-mute",
 } as const;
 
 function Badge({
@@ -36,13 +37,8 @@ function Badge({
   tone: keyof typeof TONES;
   title?: string;
 }) {
-  const c = TONES[tone];
   return (
-    <span
-      title={title}
-      className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium"
-      style={{ background: c[0], border: `1px solid ${c[1]}`, color: c[2] }}
-    >
+    <span title={title} className={`pill ${TONES[tone]} shrink-0`}>
       {children}
     </span>
   );
@@ -58,10 +54,11 @@ const KAYNAK_ETIKET: Record<UyelikKaynagi, { text: string; tone: keyof typeof TO
 function Avatar({ ad }: { ad: string }) {
   return (
     <div
-      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
+      className="flex h-7 w-7 shrink-0 items-center justify-center text-[11px] font-semibold"
       style={{
-        background: "rgba(56,189,248,0.12)",
-        border: "1px solid rgba(56,189,248,0.22)",
+        borderRadius: "var(--r-pill)",
+        background: "var(--ac-sky-dim)",
+        border: "1px solid var(--ac-sky-edge)",
         color: "var(--ac-sky)",
       }}
     >
@@ -91,7 +88,7 @@ function MemberRow({
   return (
     <div
       className="flex items-center gap-2.5 px-3 py-2"
-      style={{ borderTop: "1px solid rgba(255,255,255,0.045)" }}
+      style={{ borderTop: "1px solid var(--tb-line)" }}
     >
       <Avatar ad={m.adSoyad} />
       <div className="min-w-0 flex-1">
@@ -220,8 +217,8 @@ function TeamCard({
                 run(() => renameTeamAction(t.id, ad));
                 setRenaming(false);
               }}
-              className="rounded-lg px-2 py-1 text-[11px]"
-              style={{ background: "rgba(56,189,248,0.15)", color: "var(--ac-sky)" }}
+              className="btn-base btn-ghost"
+              style={{ height: 28, padding: "0 10px", fontSize: 11 }}
             >
               Kaydet
             </button>
@@ -231,8 +228,8 @@ function TeamCard({
                 setAd(t.ad);
                 setRenaming(false);
               }}
-              className="rounded-lg px-2 py-1 text-[11px]"
-              style={{ color: "var(--tx-muted)" }}
+              className="btn-base"
+              style={{ height: 28, padding: "0 10px", fontSize: 11, color: "var(--tx-secondary)" }}
             >
               Vazgeç
             </button>
@@ -289,8 +286,8 @@ function TeamCard({
                 type="button"
                 onClick={() => setRenaming(true)}
                 title="Takım adını değiştir"
-                className="rounded-lg px-1.5 py-1 text-[11px]"
-                style={{ background: "var(--glass-bg-md)", color: "var(--tx-secondary)" }}
+                className="btn-icon"
+                style={{ width: 26, height: 26, fontSize: 11 }}
               >
                 ✎
               </button>
@@ -304,8 +301,15 @@ function TeamCard({
                     }
                   }}
                   title="Takımı sil"
-                  className="rounded-lg px-1.5 py-1 text-[11px]"
-                  style={{ background: "rgba(248,113,113,0.1)", color: "var(--cl-danger)" }}
+                  className="btn-icon"
+                  style={{
+                    width: 26,
+                    height: 26,
+                    fontSize: 11,
+                    background: "var(--cl-danger-dim)",
+                    borderColor: "var(--cl-danger-edge)",
+                    color: "var(--cl-danger)",
+                  }}
                 >
                   ✕
                 </button>
@@ -320,7 +324,7 @@ function TeamCard({
           {t.liderAd && (
             <div
               className="flex items-center gap-2.5 px-3 py-2"
-              style={{ background: "rgba(56,189,248,0.05)" }}
+              style={{ background: "var(--ac-sky-dim)" }}
             >
               <Avatar ad={t.liderAd} />
               <div className="min-w-0 flex-1">
@@ -406,19 +410,13 @@ export default function TakimlarPanel({
 
   const gorunenTakimsiz = takimsiz.filter(eslesir);
 
-  const Mesaj = () =>
-    mesaj ? (
-      <p
-        className="rounded-xl px-3 py-2 text-xs"
-        style={{
-          background: mesaj.tip === "ok" ? "rgba(52,211,153,0.1)" : "rgba(248,113,113,0.1)",
-          border: `1px solid ${mesaj.tip === "ok" ? "rgba(52,211,153,0.25)" : "rgba(248,113,113,0.25)"}`,
-          color: mesaj.tip === "ok" ? "var(--cl-ok)" : "var(--cl-danger)",
-        }}
-      >
-        {mesaj.text}
-      </p>
-    ) : null;
+  /* Bu blok eskiden render govdesinde tanimlanan bir `Mesaj` BILESENIYDI.
+     Render sirasinda bilesen olusturmak her render'da yeni bir tip uretir,
+     React agaci sifirlar (ve lint bunu hata sayiyor). Artik duz bir JSX
+     degeri - ayni cikti, sifirlanma yok. */
+  const mesajBloku = mesaj ? (
+    <Notice ton={mesaj.tip === "ok" ? "ok" : "danger"}>{mesaj.text}</Notice>
+  ) : null;
 
   /* İlk kurulum ekranı */
   if (bosMu) {
@@ -434,7 +432,7 @@ export default function TakimlarPanel({
           Arka planda çalışan senkronizasyon bunu kendisi kuracak — birkaç dakika içinde bu sayfayı
           yenilediğinizde takımlar görünür.
         </p>
-        <p className="mt-2 text-xs" style={{ color: "var(--tx-muted)" }}>
+        <p className="mt-2 text-xs" style={{ color: "var(--tx-secondary)" }}>
           Beklemek istemiyorsanız aşağıdaki düğmeyle hemen başlatabilirsiniz.
         </p>
         {isAdmin && (
@@ -442,18 +440,13 @@ export default function TakimlarPanel({
             type="button"
             disabled={pending}
             onClick={() => run(syncKolayAction)}
-            className="mt-3 rounded-xl px-4 py-2 text-sm font-semibold"
-            style={{
-              background: "linear-gradient(135deg, rgba(56,189,248,0.9), rgba(6,214,160,0.85))",
-              color: "#06091a",
-            }}
+            className="btn-base btn-primary mt-3 px-4"
+            style={{ height: 34 }}
           >
             {pending ? "Kuruluyor…" : "Şimdi Kur"}
           </button>
         )}
-        <div className="mt-3">
-          <Mesaj />
-        </div>
+        <div className="mt-3">{mesajBloku}</div>
       </div>
     );
   }
@@ -465,13 +458,18 @@ export default function TakimlarPanel({
           value={ara}
           onChange={(e) => setAra(e.target.value)}
           placeholder="Kişi, sicil veya takım ara…"
-          className="input-glass px-3 py-2 text-sm"
-          style={{ width: 264 }}
+          className="input-glass px-3 text-xs"
+          style={{ width: 260, height: 34, boxSizing: "border-box" }}
         />
-        <label className="flex items-center gap-1.5 text-[11px]" style={{ color: "var(--tx-secondary)" }}>
-          <input type="checkbox" checked={pasifGoster} onChange={(e) => setPasifGoster(e.target.checked)} />
+        <button
+          type="button"
+          aria-pressed={pasifGoster}
+          onClick={() => setPasifGoster((v) => !v)}
+          className={`seg-item ${pasifGoster ? "seg-on" : ""}`}
+          style={{ border: "1px solid var(--edge-soft)" }}
+        >
           Pasif takımlar
-        </label>
+        </button>
 
         {isAdmin && (
           <div className="ml-auto flex flex-wrap items-center gap-2">
@@ -479,8 +477,8 @@ export default function TakimlarPanel({
               value={yeniAd}
               onChange={(e) => setYeniAd(e.target.value)}
               placeholder="Yeni takım adı"
-              className="input-glass px-2.5 py-1.5 text-xs"
-              style={{ width: 150 }}
+              className="input-glass px-2.5 text-xs"
+              style={{ width: 150, height: 32, boxSizing: "border-box" }}
             />
             <button
               type="button"
@@ -489,8 +487,8 @@ export default function TakimlarPanel({
                 run(() => createTeamAction(yeniAd));
                 setYeniAd("");
               }}
-              className="rounded-lg px-3 py-1.5 text-xs font-medium"
-              style={{ background: "var(--glass-bg-hi)", color: "var(--tx-primary)" }}
+              className="btn-base btn-ghost"
+              style={{ height: 32, padding: "0 12px", fontSize: 11.5 }}
             >
               Takım Ekle
             </button>
@@ -499,8 +497,8 @@ export default function TakimlarPanel({
               disabled={pending}
               onClick={() => run(syncTeamsAction)}
               title="Önbellekteki İK verisinden takım tanımlarını tazele"
-              className="rounded-lg px-3 py-1.5 text-xs font-medium"
-              style={{ background: "var(--glass-bg-hi)", color: "var(--tx-primary)" }}
+              className="btn-base btn-ghost"
+              style={{ height: 32, padding: "0 12px", fontSize: 11.5 }}
             >
               Takımları Tazele
             </button>
@@ -509,11 +507,8 @@ export default function TakimlarPanel({
               disabled={pending}
               onClick={() => run(syncKolayAction)}
               title="Otomatiği beklemeden Kolay İK'dan personel ve birim bilgisini şimdi çek"
-              className="rounded-lg px-3 py-1.5 text-xs font-semibold"
-              style={{
-                background: "linear-gradient(135deg, rgba(56,189,248,0.85), rgba(6,214,160,0.8))",
-                color: "#06091a",
-              }}
+              className="btn-base btn-primary"
+              style={{ height: 32, padding: "0 12px", fontSize: 11.5 }}
             >
               {pending ? "Eşitleniyor…" : "Kolay İK ile Eşitle"}
             </button>
@@ -521,25 +516,17 @@ export default function TakimlarPanel({
         )}
       </div>
 
-      <Mesaj />
+      {mesajBloku}
 
       {kolayBosMu && (
-        <p
-          className="rounded-xl px-3 py-2.5 text-xs leading-relaxed"
-          style={{
-            background: "rgba(251,191,36,0.1)",
-            border: "1px solid rgba(251,191,36,0.25)",
-            color: "#fbbf24",
-          }}
-        >
+        <Notice ton="warn">
           Kolay İK personel önbelleği henüz doldurulmadı — takımlar şu an yalnızca Zoho&apos;dan
-          türetiliyor. Arka plan senkronizasyonu bunu kendisi tazeleyecek; beklemek istemezseniz
-          <span style={{ color: "var(--tx-primary)" }}> Kolay İK ile Eşitle</span> düğmesini
-          kullanabilirsiniz.
-        </p>
+          türetiliyor. Arka plan senkronizasyonu bunu kendisi tazeleyecek; beklemek istemezseniz{" "}
+          <Vurgu>Kolay İK ile Eşitle</Vurgu> düğmesini kullanabilirsiniz.
+        </Notice>
       )}
 
-      <p className="max-w-4xl text-[11px] leading-relaxed" style={{ color: "var(--tx-muted)" }}>
+      <p className="max-w-4xl text-[11px] leading-relaxed" style={{ color: "var(--tx-secondary)" }}>
         Üyelik her açılışta canlı çözülür; sıra <span style={{ color: "var(--ac-sky)" }}>elle atama</span>{" "}
         → <span style={{ color: "var(--cl-ok)" }}>Kolay İK</span> →{" "}
         <span style={{ color: "var(--cl-violet)" }}>Zoho</span> şeklindedir. Yani biri Kolay veya
@@ -558,7 +545,7 @@ export default function TakimlarPanel({
       </div>
 
       {gorunen.length === 0 && (
-        <p className="glass-card p-6 text-center text-sm" style={{ color: "var(--tx-muted)" }}>
+        <p className="glass-card p-6 text-center text-xs" style={{ color: "var(--tx-secondary)" }}>
           Aramaya uyan takım bulunamadı.
         </p>
       )}
@@ -569,7 +556,7 @@ export default function TakimlarPanel({
             <h3 className="text-sm font-semibold" style={{ color: "var(--tx-primary)" }}>
               Takımsız Personel
             </h3>
-            <p className="mt-0.5 text-[11px]" style={{ color: "var(--tx-muted)" }}>
+            <p className="mt-0.5 text-[11px]" style={{ color: "var(--tx-secondary)" }}>
               Ne Kolay İK&apos;da ne Zoho&apos;da takımı bulunabilen satış personeli. Buradan elle bir
               takıma atayabilirsiniz.
             </p>

@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import DotMatrixBackground from "@/components/ui/DotMatrixBackground";
+import ThemeToggle from "@/components/nav/ThemeToggle";
+import Notice from "@/components/ui/Notice";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -28,59 +30,60 @@ export default function LoginPage() {
       }
       router.push("/ozet");
       router.refresh();
+    } catch {
+      setError("Sunucuya ulaşılamadı. Bağlantınızı kontrol edip tekrar deneyin.");
     } finally {
       setLoading(false);
     }
   }
 
-  // Giriş alanları: koyu zemin üzerinde ince çerçeve. Odaklanınca çerçeve
-  // vurgulanır — klavyeyle gezinen kullanıcı nerede olduğunu görmeli.
-  const alanStili = "w-full rounded-md px-3 py-2.5 text-sm outline-none transition-colors";
-
   return (
-    <div
-      className="relative flex min-h-screen items-center justify-center overflow-hidden px-4"
-      style={{ background: "#000", color: "#fff" }}
-    >
+    /* Zemin gövdeden gelen mesh gradient — cam kartın kıracağı canlı renk bu.
+       Eskiden burada `background: #000` vardı; düz siyah üzerinde
+       backdrop-filter hiçbir şey göstermez, kart "donuk kutu" gibi durur. */
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
       <DotMatrixBackground />
 
-      {/* Kenarları karartan geçiş — kart ortada öne çıksın. */}
+      {/* Kenarları yumuşatan geçiş — kart ortada öne çıksın. */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 z-[1]"
         style={{
           background:
-            "radial-gradient(circle at center, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0) 100%)",
+            "radial-gradient(circle at center, var(--sf-sunken) 0%, transparent 72%)",
         }}
       />
 
+      {/* Tema anahtarı — giriş ekranında da erişilebilir olmalı */}
+      <div className="absolute right-4 top-4 z-[3]">
+        <ThemeToggle mini />
+      </div>
+
       {/* Giriş kartı */}
       <div
-        className="anim-scale-in relative z-[2] w-full max-w-[400px] rounded-xl px-8 py-9"
-        style={{
-          background: "#121212",
-          border: "1px solid #222",
-          boxShadow: "0 10px 40px rgba(0,0,0,0.8)",
-        }}
+        className="anim-scale-in glass-modal glass-hairline relative z-[2] w-full px-8 py-9"
+        style={{ maxWidth: 400 }}
       >
-        <div className="mb-8 flex flex-col items-center text-center">
+        <div className="mb-7 flex flex-col items-center text-center">
           <div
-            className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl"
+            className="mb-4 flex h-12 w-12 items-center justify-center"
             style={{
-              background: "linear-gradient(135deg, rgba(56,189,248,0.20), rgba(6,214,160,0.16))",
-              border: "1px solid rgba(56,189,248,0.32)",
+              borderRadius: "var(--r-sm)",
+              background: "var(--ac-sky-dim)",
+              border: "1px solid var(--ac-sky-edge)",
+              boxShadow: "var(--sheen)",
             }}
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-label="PDKS Pro logo">
               <path
                 d="M12 2L3 7v10l9 5 9-5V7L12 2z"
-                stroke="#38bdf8"
+                stroke="var(--ac-sky)"
                 strokeWidth="1.6"
                 strokeLinejoin="round"
               />
               <path
                 d="M12 7v10M7 9.5l5 2.5 5-2.5"
-                stroke="#06d6a0"
+                stroke="var(--ac-cyan)"
                 strokeWidth="1.4"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -88,79 +91,57 @@ export default function LoginPage() {
             </svg>
           </div>
 
-          <h1 className="text-[1.35rem] font-semibold tracking-tight">PDKS Pro</h1>
-          <p className="mt-1 text-[0.85rem] leading-relaxed" style={{ color: "#888" }}>
+          <h1 className="text-[22px] font-semibold" style={{ color: "var(--tx-primary)" }}>
+            PDKS Pro
+          </h1>
+          <p className="mt-1 text-xs leading-relaxed" style={{ color: "var(--tx-secondary)" }}>
             Natural Clinic — Personel Devam Sistemi
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-          <div className="space-y-1.5">
-            <label
-              htmlFor="kullanici"
-              className="block text-[11px] font-medium uppercase tracking-wider"
-              style={{ color: "#888" }}
-            >
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3.5">
+          <div>
+            <label htmlFor="kullanici" className="form-label">
               Kullanıcı Adı
             </label>
             <input
               id="kullanici"
-              className={alanStili}
-              style={{ background: "#000", border: "1px solid #333", color: "#fff" }}
+              className="input-glass w-full px-3 text-sm"
+              style={{ height: 38, boxSizing: "border-box" }}
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              onFocus={(e) => (e.currentTarget.style.borderColor = "#38bdf8")}
-              onBlur={(e) => (e.currentTarget.style.borderColor = "#333")}
               autoFocus
               required
               autoComplete="username"
             />
           </div>
 
-          <div className="space-y-1.5">
-            <label
-              htmlFor="sifre"
-              className="block text-[11px] font-medium uppercase tracking-wider"
-              style={{ color: "#888" }}
-            >
+          <div>
+            <label htmlFor="sifre" className="form-label">
               Şifre
             </label>
             <input
               id="sifre"
               type="password"
-              className={alanStili}
-              style={{ background: "#000", border: "1px solid #333", color: "#fff" }}
+              className="input-glass w-full px-3 text-sm"
+              style={{ height: 38, boxSizing: "border-box" }}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              onFocus={(e) => (e.currentTarget.style.borderColor = "#38bdf8")}
-              onBlur={(e) => (e.currentTarget.style.borderColor = "#333")}
               required
               autoComplete="current-password"
             />
           </div>
 
-          {error && (
-            <div
-              role="alert"
-              className="rounded-md px-3.5 py-2.5 text-sm"
-              style={{
-                background: "rgba(248,113,113,0.1)",
-                border: "1px solid rgba(248,113,113,0.28)",
-                color: "#f87171",
-              }}
-            >
-              {error}
-            </div>
-          )}
+          {error && <Notice ton="danger">{error}</Notice>}
 
           <button
             type="submit"
             disabled={loading}
-            className="mt-2 w-full rounded-md py-2.5 text-sm font-medium transition-opacity disabled:opacity-60"
-            style={{ background: "#ededed", color: "#000", border: "none" }}
+            className="btn-base btn-primary mt-1 w-full"
+            style={{ height: 40, fontSize: 13 }}
           >
             {loading ? (
-              <span className="inline-flex items-center gap-2">
+              <>
                 <svg
                   width="14"
                   height="14"
@@ -175,14 +156,14 @@ export default function LoginPage() {
                   <path d="M21 12a9 9 0 1 1-6.219-8.56" />
                 </svg>
                 Giriş yapılıyor…
-              </span>
+              </>
             ) : (
               "Giriş Yap"
             )}
           </button>
         </form>
 
-        <p className="mt-5 text-center text-[0.75rem] leading-relaxed" style={{ color: "#666" }}>
+        <p className="mt-5 text-center text-[11px] leading-relaxed" style={{ color: "var(--tx-secondary)" }}>
           Yalnızca yetkili personel. Erişim sorunlarında sistem yöneticinize başvurun.
         </p>
       </div>

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import DataTable, { type Column } from "@/components/ui/DataTable";
+import Notice, { Vurgu } from "@/components/ui/Notice";
 
 export interface PersonelRow {
   key: string;
@@ -40,16 +41,16 @@ export default function PersonelTable({ rows }: { rows: PersonelRow[] }) {
   );
 
   const columns: Column<PersonelRow>[] = [
-    { key: "sicil", header: "Sicil", cell: (r) => <span className="text-slate-500">{r.sicil}</span>, sortValue: (r) => Number(r.sicil) || r.sicil },
+    { key: "sicil", header: "Sicil", cell: (r) => <span className="cell-code">{r.sicil}</span>, sortValue: (r) => Number(r.sicil) || r.sicil },
     { key: "adSoyad", header: "PDKS Adı", cell: (r) => <span className="font-medium">{r.adSoyad}</span>, sortValue: (r) => r.adSoyad },
     {
       key: "zoho",
       header: "Zoho Görünen Ad",
       cell: (r) =>
         r.zohoTakmaAd ? (
-          <span className="text-teal-300">{r.zohoTakmaAd}</span>
+          <span style={{ color: "var(--ac-cyan)" }}>{r.zohoTakmaAd}</span>
         ) : (
-          <span className="text-slate-600">-</span>
+          <span style={{ color: "var(--tx-disabled)" }}>-</span>
         ),
       sortValue: (r) => r.zohoTakmaAd ?? "",
     },
@@ -59,11 +60,11 @@ export default function PersonelTable({ rows }: { rows: PersonelRow[] }) {
       align: "center",
       cell: (r) =>
         r.zohoEslesme === "employment_no" ? (
-          <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-xs text-emerald-300">Sicil</span>
+          <span className="pill pill-ok">Sicil</span>
         ) : r.zohoEslesme === "name" ? (
-          <span className="rounded bg-amber-500/10 px-1.5 py-0.5 text-xs text-amber-300">İsim</span>
+          <span className="pill pill-warn">İsim</span>
         ) : (
-          <span className="rounded bg-slate-700/40 px-1.5 py-0.5 text-xs text-slate-500">Yok</span>
+          <span className="pill pill-mute">Yok</span>
         ),
       sortValue: (r) => (r.zohoEslesme === "employment_no" ? 0 : r.zohoEslesme === "name" ? 1 : 2),
     },
@@ -71,36 +72,50 @@ export default function PersonelTable({ rows }: { rows: PersonelRow[] }) {
       key: "unvan",
       header: "Ünvan",
       cell: (r) => (
-        <span className={r.unvan === "Bilinmiyor" ? "text-red-400" : "text-slate-300"}>{r.unvan}</span>
+        <span
+          style={{
+            color: r.unvan === "Bilinmiyor" ? "var(--cl-danger)" : "var(--tx-primary)",
+          }}
+        >
+          {r.unvan}
+        </span>
       ),
       sortValue: (r) => r.unvan,
     },
-    { key: "bolum", header: "Bölüm", cell: (r) => <span className="text-slate-400">{r.bolum || "-"}</span>, sortValue: (r) => r.bolum },
-    { key: "firma", header: "Firma", cell: (r) => <span className="text-slate-500">{r.firma || "-"}</span>, sortValue: (r) => r.firma },
+    { key: "bolum", header: "Bölüm", cell: (r) => <span style={{ color: "var(--tx-secondary)" }}>{r.bolum || "-"}</span>, sortValue: (r) => r.bolum },
+    { key: "firma", header: "Firma", cell: (r) => <span style={{ color: "var(--tx-secondary)" }}>{r.firma || "-"}</span>, sortValue: (r) => r.firma },
     {
       key: "vardiya",
       header: "Vardiya",
       align: "center",
-      cell: (r) => <span className={r.vardiya === "Gece" ? "text-violet-300" : "text-amber-300"}>{r.vardiya}</span>,
+      cell: (r) => (
+        <span className={`pill ${r.vardiya === "Gece" ? "pill-violet" : "pill-warn"}`}>
+          {r.vardiya}
+        </span>
+      ),
       sortValue: (r) => r.vardiya,
     },
     {
       key: "kayit",
       header: "Geçiş Kaydı",
       align: "right",
-      cell: (r) => <span className="text-slate-400">{r.kayitSayisi.toLocaleString("tr-TR")}</span>,
+      cell: (r) => (
+        <span className="tabular-nums" style={{ color: "var(--tx-secondary)" }}>
+          {r.kayitSayisi.toLocaleString("tr-TR")}
+        </span>
+      ),
       sortValue: (r) => r.kayitSayisi,
     },
   ];
 
   return (
     <>
-      <div className="mb-4 rounded-lg border border-slate-800 bg-slate-900/40 p-3 text-xs text-slate-400">
-        Personel listesi <span className="text-slate-300">turnike_gecisler</span> tablosundan canlı
-        türetilir; ünvan bilgisi her geçiş kaydındaki <span className="text-slate-300">alt_firma</span>{" "}
+      <Notice ton="info" className="mb-4">
+        Personel listesi <Vurgu>turnike_gecisler</Vurgu> tablosundan canlı türetilir; ünvan bilgisi
+        her geçiş kaydındaki <Vurgu>alt_firma</Vurgu>{" "}
         alanından gelir. Zoho eşleşmesi önce sicil (Employment No), bulunamazsa gerçek isim
         (Original Agent Name) üzerinden yapılır.
-      </div>
+      </Notice>
       <DataTable
         rows={filtered}
         columns={columns}
