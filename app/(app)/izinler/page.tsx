@@ -40,15 +40,16 @@ export default async function IzinlerPage({
         description="Kolay İK'dan onaylı izin kayıtları — yıllık, ücretsiz, babalık vb."
         range={data.range}
       />
-      <div className="space-y-5 p-7">
-        <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="space-y-4 p-6">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
             label="İzin Kaydı"
             value={izin.kullanilabilir ? rows.length : "—"}
-            tone="teal"
+            tone="sky"
+            icon="🗓"
             hint={izin.kullanilabilir ? `${toplamIzinGunu} izin günü` : "İzin erişimi yok"}
           />
-          <StatCard label="Kolay İK Çalışan" value={izin.kolayKisiSayisi} tone="green" />
+          <StatCard label="Kolay İK Çalışan" value={izin.kolayKisiSayisi} tone="green" icon="👥" />
           <StatCard
             label="Eşleşen Personel"
             value={izin.eslesen}

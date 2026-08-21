@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import DataTable, { type Column } from "@/components/ui/DataTable";
 import StatCard from "@/components/ui/StatCard";
+import Modal from "@/components/ui/Modal";
+import Notice from "@/components/ui/Notice";
 import { ALARM_TIPLERI, type AlarmTip } from "@/lib/engine/constants";
 import { getAlarmDayRecordsAction } from "@/app/actions/alarmDetail";
 
@@ -27,29 +29,26 @@ export interface AlarmDayRecord {
   yon: string;
 }
 
-const TONE: Record<AlarmTip, { bg: string; border: string; color: string }> = {
+/** Alarm tipi → görsel ton. Renkler token, açık temada da okunur. */
+const TON: Record<AlarmTip, { pill: string; bg: string; edge: string; fg: string }> = {
   TURNIKESIZ_CIKIS: {
-    bg: "rgba(248,113,113,0.08)",
-    border: "rgba(248,113,113,0.2)",
-    color: "#f87171",
+    pill: "pill-danger",
+    bg: "var(--cl-danger-dim)",
+    edge: "var(--cl-danger-edge)",
+    fg: "var(--cl-danger)",
   },
   KART_BASMA: {
-    bg: "rgba(251,191,36,0.08)",
-    border: "rgba(251,191,36,0.2)",
-    color: "#fbbf24",
+    pill: "pill-warn",
+    bg: "var(--cl-warn-dim)",
+    edge: "var(--cl-warn-edge)",
+    fg: "var(--cl-warn)",
   },
   TURNIKE_ATLAMA: {
-    bg: "rgba(167,139,250,0.08)",
-    border: "rgba(167,139,250,0.2)",
-    color: "#a78bfa",
+    pill: "pill-violet",
+    bg: "var(--cl-violet-dim)",
+    edge: "var(--cl-violet-edge)",
+    fg: "var(--cl-violet)",
   },
-};
-
-// legacy string tone for DataTable cells (unchanged logic)
-const TONE_CLASS: Record<AlarmTip, string> = {
-  TURNIKESIZ_CIKIS: "text-red-300 bg-red-500/10",
-  KART_BASMA: "text-amber-300 bg-amber-500/10",
-  TURNIKE_ATLAMA: "text-violet-300 bg-violet-500/10",
 };
 
 export default function AlarmTable({
@@ -74,20 +73,42 @@ export default function AlarmTable({
   const [dayRecords, setDayRecords] = useState<AlarmDayRecord[] | null>(null);
   const [detayError, setDetayError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!detay) return;
-    let cancelled = false;
+  /**
+   * Gün kayıtları KULLANICI TIKLAMASIYLA çekiliyor, useEffect ile değil.
+   *
+   * Eskiden `useEffect(..., [detay])` içinde setState çağrılıyordu; bu hem
+   * zincirleme render tetikliyor hem de React'in "efekt gövdesinde setState
+   * çağırma" kuralını ihlal ediyordu. Veri çekme zaten bir kullanıcı olayının
+   * sonucu — olay işleyicisine taşımak hem doğru hem daha yalın.
+   *
+   * YARIŞ KORUMASI: kullanıcı hızlıca başka bir satıra tıklarsa önceki isteğin
+   * gecikmiş yanıtı yeni satırın kayıtlarını ezebilir. Her istek bir sıra
+   * numarası alıyor, yalnızca en güncel olan state'e yazıyor.
+   */
+  const istekNo = useRef(0);
+
+  async function ac(r: AlarmRow) {
+    const no = ++istekNo.current;
+    setDetay(r);
     setDayRecords(null);
     setDetayError(null);
-    getAlarmDayRecordsAction(detay.sicil, detay.tarih, sd, ed).then((res) => {
-      if (cancelled) return;
+    try {
+      const res = await getAlarmDayRecordsAction(r.sicil, r.tarih, sd, ed);
+      if (no !== istekNo.current) return; // eskimiş yanıt — yok say
       if (res.ok) setDayRecords(res.records);
       else setDetayError(res.error);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [detay, sd, ed]);
+    } catch (e) {
+      if (no !== istekNo.current) return;
+      setDetayError(e instanceof Error ? e.message : "Kayıtlar alınamadı.");
+    }
+  }
+
+  function kapat() {
+    istekNo.current++; // uçuşta olan isteğin sonucu artık uygulanmasın
+    setDetay(null);
+    setDayRecords(null);
+    setDetayError(null);
+  }
 
   const counts = useMemo(() => {
     if (!tl) return totalCounts;
@@ -110,17 +131,13 @@ export default function AlarmTable({
     {
       key: "tip",
       header: "Alarm",
-      cell: (r) => (
-        <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${TONE_CLASS[r.tip]}`}>
-          {r.tipLabel}
-        </span>
-      ),
+      cell: (r) => <span className={`pill ${TON[r.tip].pill}`}>{r.tipLabel}</span>,
       sortValue: (r) => r.tipLabel,
     },
     {
       key: "sicil",
       header: "Sicil",
-      cell: (r) => <span style={{ color: "var(--tx-muted)" }}>{r.sicil}</span>,
+      cell: (r) => <span className="cell-code">{r.sicil}</span>,
       sortValue: (r) => Number(r.sicil) || r.sicil,
     },
     {
@@ -129,7 +146,12 @@ export default function AlarmTable({
       cell: (r) => <span className="font-medium">{r.adSoyad}</span>,
       sortValue: (r) => r.adSoyad,
     },
-    { key: "tarih", header: "Tarih", cell: (r) => r.tarih, sortValue: (r) => r.tarih.split(".").reverse().join("-") },
+    {
+      key: "tarih",
+      header: "Tarih",
+      cell: (r) => <span className="tabular-nums">{r.tarih}</span>,
+      sortValue: (r) => r.tarih.split(".").reverse().join("-"),
+    },
     {
       key: "saat",
       header: "Saat",
@@ -146,45 +168,54 @@ export default function AlarmTable({
     {
       key: "detay",
       header: "Açıklama",
-      cell: (r) => <span className="text-xs" style={{ color: "var(--tx-secondary)" }}>{r.detay}</span>,
+      cell: (r) => (
+        <span className="text-[11px]" style={{ color: "var(--tx-secondary)" }}>
+          {r.detay}
+        </span>
+      ),
     },
     {
       key: "tl",
       header: "Ünvan",
-      cell: (r) => <span style={{ color: "var(--tx-muted)" }}>{r.unvan}</span>,
+      cell: (r) => <span style={{ color: "var(--tx-secondary)" }}>{r.unvan}</span>,
       sortValue: (r) => r.unvan,
     },
   ];
 
   return (
     <>
-      <div className="mb-5 grid gap-3 sm:grid-cols-3">
-        <StatCard label="Turnikesiz Çıkış" value={counts.TURNIKESIZ_CIKIS} icon="🚨" tone="red" />
-        <StatCard label="Kart Basma Şüphesi" value={counts.KART_BASMA} icon="👥" tone="amber" />
+      <div className="mb-4 grid gap-3 sm:grid-cols-3">
+        <StatCard label="Turnikesiz Çıkış" value={counts.TURNIKESIZ_CIKIS} icon="🚪" tone="red" />
+        <StatCard label="Kart Basma Şüphesi" value={counts.KART_BASMA} icon="🪪" tone="amber" />
         <StatCard label="Turnike Atlama" value={counts.TURNIKE_ATLAMA} icon="⚠️" tone="violet" />
       </div>
 
-      <div className="mb-3 flex flex-wrap items-center gap-4">
-        {(Object.keys(ALARM_TIPLERI) as AlarmTip[]).map((t) => (
-          <label
-            key={t}
-            className="flex cursor-pointer items-center gap-2 text-sm"
-            style={{ color: "var(--tx-secondary)" }}
-          >
-            <input
-              type="checkbox"
-              checked={aktif[t]}
-              onChange={(e) => setAktif((s) => ({ ...s, [t]: e.target.checked }))}
-              className="h-4 w-4 accent-sky-400"
-            />
-            {ALARM_TIPLERI[t]}
-          </label>
-        ))}
+      {/* Tip açma/kapama — native checkbox yerine basılabilir çipler; accent
+          rengi tarayıcıya bırakıldığında temayla uyumsuz kalıyordu. */}
+      <div className="nc-toolbar mb-3">
+        <span className="text-[9.5px] font-bold uppercase tracking-[0.12em]" style={{ color: "var(--tx-muted)" }}>
+          Alarm Tipi
+        </span>
+        <div className="seg" role="group" aria-label="Alarm tipi filtresi">
+          {(Object.keys(ALARM_TIPLERI) as AlarmTip[]).map((t) => (
+            <button
+              key={t}
+              type="button"
+              aria-pressed={aktif[t]}
+              onClick={() => setAktif((s) => ({ ...s, [t]: !s[t] }))}
+              className={`seg-item ${aktif[t] ? "seg-on" : ""}`}
+            >
+              {ALARM_TIPLERI[t]}
+              <span className="ml-1.5 tabular-nums" style={{ opacity: 0.75 }}>
+                {counts[t]}
+              </span>
+            </button>
+          ))}
+        </div>
+        <span className="text-[11px]" style={{ color: "var(--tx-secondary)" }}>
+          Satıra tıkla = o kişinin o günündeki tüm geçiş kayıtları
+        </span>
       </div>
-
-      <p className="mb-3 text-xs" style={{ color: "var(--tx-muted)" }}>
-        🚨 Şüpheli geçişler. Satıra tıkla = o kişinin o günündeki TÜM geçiş kayıtlarını gör.
-      </p>
 
       <DataTable
         rows={filtered}
@@ -193,141 +224,104 @@ export default function AlarmTable({
         searchText={(r) => `${r.sicil} ${r.adSoyad} ${r.okuyucu} ${r.tarih}`}
         searchPlaceholder="Ad, soyad, sicil veya okuyucu ara..."
         filters={[{ label: "Tüm Ünvanlar", options: tlList, value: tl, onChange: setTl }]}
-        onRowClick={(r) => setDetay(r)}
+        onRowClick={ac}
         emptyText="Seçili filtrelerde alarm yok."
+        density="dense"
         pageSize={150}
       />
 
-      {/* Modal */}
       {detay && (
-        <div
-          className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
-          onClick={() => setDetay(null)}
+        <Modal
+          baslik={detay.adSoyad}
+          altBaslik={`${detay.tarih} vardiya günü · Sicil ${detay.sicil} · ${detay.unvan}`}
+          onClose={kapat}
+          genislik={660}
+          footer={
+            <button onClick={kapat} className="btn-ghost px-5" style={{ height: 34 }}>
+              Kapat
+            </button>
+          }
         >
+          {/* Alarmın kendisi */}
           <div
-            className="modal-panel glass-modal relative max-h-[85vh] w-full max-w-2xl overflow-y-auto p-6"
-            onClick={(e) => e.stopPropagation()}
+            className="mb-4 p-3.5"
+            style={{
+              background: TON[detay.tip].bg,
+              border: `1px solid ${TON[detay.tip].edge}`,
+              borderRadius: "var(--r-xs)",
+            }}
           >
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-x-0 top-0 h-px rounded-t-[18px]"
-              style={{
-                background: `linear-gradient(90deg, transparent, ${TONE[detay.tip].color}80 50%, transparent)`,
-              }}
-            />
-
-            <div className="text-lg font-semibold" style={{ color: "var(--tx-primary)" }}>
-              {detay.adSoyad}
+            <div className="text-[12.5px] font-semibold" style={{ color: TON[detay.tip].fg }}>
+              {detay.tipLabel}
             </div>
-            <div className="mb-4 text-sm" style={{ color: "var(--tx-secondary)" }}>
-              {detay.tarih} vardiya günü · Sicil {detay.sicil} · {detay.unvan}
+            <div className="mt-0.5 text-[11.5px] leading-relaxed" style={{ color: "var(--tx-secondary)" }}>
+              {detay.detay}
             </div>
-
-            <div
-              className="mb-5 rounded-xl p-4 text-sm"
-              style={{
-                background: TONE[detay.tip].bg,
-                border: `1px solid ${TONE[detay.tip].border}`,
-              }}
-            >
-              <div className="mb-1 font-semibold" style={{ color: TONE[detay.tip].color }}>
-                {detay.tipLabel}
-              </div>
-              <div className="text-xs opacity-90" style={{ color: "var(--tx-secondary)" }}>
-                {detay.detay}
-              </div>
+            <div className="mt-1.5 text-[11px] tabular-nums" style={{ color: "var(--tx-secondary)" }}>
+              {detay.saat} · {detay.okuyucu}
             </div>
+          </div>
 
-            <div className="mb-3 text-sm font-semibold" style={{ color: "var(--tx-primary)" }}>
+          <div className="mb-2 flex items-center gap-2">
+            <span aria-hidden className="h-3 w-[3px] rounded-full" style={{ background: "var(--ac-sky)" }} />
+            <span className="text-[12.5px] font-semibold" style={{ color: "var(--tx-primary)" }}>
               O Günün Tüm Geçiş Kayıtları
               {dayRecords && (
-                <span className="ml-1.5 text-xs font-normal" style={{ color: "var(--tx-muted)" }}>
+                <span className="ml-1.5 font-normal tabular-nums" style={{ color: "var(--tx-secondary)" }}>
                   ({dayRecords.length})
                 </span>
               )}
-            </div>
+            </span>
+          </div>
 
-            {detayError ? (
-              <div
-                className="rounded-xl p-3 text-sm"
-                style={{
-                  background: "var(--cl-danger-dim)",
-                  border: "1px solid rgba(248,113,113,0.25)",
-                  color: "var(--cl-danger)",
-                }}
-              >
-                {detayError}
-              </div>
-            ) : dayRecords === null ? (
-              <p className="py-6 text-center text-sm" style={{ color: "var(--tx-muted)" }}>
-                Kayıtlar yükleniyor…
-              </p>
-            ) : (
-              <div
-                className="overflow-hidden rounded-xl"
-                style={{ border: "1px solid rgba(255,255,255,0.07)" }}
-              >
-                <table className="w-full text-xs">
-                  <thead
-                    style={{
-                      background: "rgba(7,14,26,0.96)",
-                      borderBottom: "1px solid rgba(255,255,255,0.07)",
-                    }}
-                  >
-                    <tr>
-                      {["Saat", "Okuyucu", "Alan", "Yön"].map((h) => (
-                        <th
-                          key={h}
-                          className="px-3 py-2 text-left font-medium uppercase tracking-wider"
-                          style={{ color: "var(--tx-secondary)" }}
-                        >
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {dayRecords.map((rec, i) => (
-                      <tr
-                        key={i}
-                        style={{
-                          borderTop: "1px solid rgba(255,255,255,0.05)",
-                          background:
-                            rec.saat === detay.saat
-                              ? "rgba(56,189,248,0.08)"
-                              : "transparent",
-                        }}
-                      >
+          {detayError ? (
+            <Notice ton="danger">{detayError}</Notice>
+          ) : dayRecords === null ? (
+            /* Yükleniyor — iskelet satırlar, "yükleniyor" metninden daha az sıçratır */
+            <div className="space-y-1.5">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <div key={i} className="skel h-7" />
+              ))}
+            </div>
+          ) : dayRecords.length === 0 ? (
+            <p className="py-4 text-center text-xs" style={{ color: "var(--tx-secondary)" }}>
+              Bu güne ait başka geçiş kaydı bulunamadı.
+            </p>
+          ) : (
+            <div className="glass-table overflow-x-auto">
+              <table className="tbl tbl-dense">
+                <thead>
+                  <tr>
+                    {["Saat", "Okuyucu", "Alan", "Yön"].map((h) => (
+                      <th key={h} scope="col">
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {dayRecords.map((rec, i) => {
+                    // Alarmı doğuran satırı vurgula — kullanıcının aradığı an bu.
+                    const vurgu = rec.saat === detay.saat;
+                    return (
+                      <tr key={i} className={vurgu ? "row-info" : undefined}>
                         <td
-                          className="px-3 py-1.5 tabular-nums font-medium"
-                          style={{ color: rec.saat === detay.saat ? "var(--ac-sky)" : "var(--tx-primary)" }}
+                          className="tabular-nums font-medium"
+                          style={{ color: vurgu ? "var(--ac-sky)" : "var(--tx-primary)" }}
                         >
                           {rec.saat}
                         </td>
-                        <td className="px-3 py-1.5" style={{ color: "var(--tx-primary)" }}>{rec.okuyucu}</td>
-                        <td className="px-3 py-1.5" style={{ color: "var(--tx-secondary)" }}>{rec.alan}</td>
-                        <td className="px-3 py-1.5" style={{ color: "var(--tx-secondary)" }}>{rec.yon}</td>
+                        <td>{rec.okuyucu}</td>
+                        <td style={{ color: "var(--tx-secondary)" }}>{rec.alan}</td>
+                        <td style={{ color: "var(--tx-secondary)" }}>{rec.yon}</td>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            <button
-              onClick={() => setDetay(null)}
-              className="mt-5 w-full rounded-xl py-2 text-sm transition-all duration-150"
-              style={{
-                background: "rgba(255,255,255,0.05)",
-                border: "1px solid rgba(255,255,255,0.1)",
-                color: "var(--tx-secondary)",
-              }}
-            >
-              Kapat
-            </button>
-          </div>
-        </div>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Modal>
       )}
     </>
   );

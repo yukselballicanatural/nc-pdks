@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import DataTable, { type Column } from "@/components/ui/DataTable";
+import Notice, { Vurgu } from "@/components/ui/Notice";
 
 export interface IzinRow {
   key: string;
@@ -55,11 +56,11 @@ export default function IzinlerPanel({
       width: "80px",
       cell: (r) =>
         r.sicil ? (
-          <span className="tabular-nums" style={{ color: "var(--tx-secondary)" }}>
-            {r.sicil}
-          </span>
+          <span className="cell-code">{r.sicil}</span>
         ) : (
-          <span style={{ color: "var(--cl-warn)" }}>—</span>
+          <span title="Bu izin kaydı bir PDKS siciline bağlanamadı" style={{ color: "var(--cl-warn)" }}>
+            —
+          </span>
         ),
       sortValue: (r) => r.sicil ?? "zzz",
     },
@@ -70,15 +71,7 @@ export default function IzinlerPanel({
         <span className="flex items-center gap-1.5">
           <span style={{ color: "var(--tx-primary)" }}>{r.adSoyad}</span>
           {r.eslesme === "isim_kismi" && (
-            <span
-              title="Kısmi isim eşleşmesi — doğruluğu kontrol edilmeli"
-              className="rounded-full px-1.5 py-0.5 text-[10px]"
-              style={{
-                background: "rgba(251,191,36,0.12)",
-                border: "1px solid rgba(251,191,36,0.3)",
-                color: "#fbbf24",
-              }}
-            >
+            <span className="pill pill-warn" title="Kısmi isim eşleşmesi — doğruluğu kontrol edilmeli">
               kontrol
             </span>
           )}
@@ -121,9 +114,9 @@ export default function IzinlerPanel({
       header: "Ücret",
       cell: (r) =>
         r.ucretli === null ? (
-          "—"
+          <span style={{ color: "var(--tx-disabled)" }}>—</span>
         ) : (
-          <span style={{ color: r.ucretli ? "var(--cl-ok)" : "var(--cl-warn)" }}>
+          <span className={`pill ${r.ucretli ? "pill-ok" : "pill-warn"}`}>
             {r.ucretli ? "Ücretli" : "Ücretsiz"}
           </span>
         ),
@@ -132,55 +125,60 @@ export default function IzinlerPanel({
     {
       key: "durum",
       header: "Durum",
-      cell: (r) => DURUM_ETIKET[r.durum] ?? r.durum,
+      cell: (r) => (
+        <span className={`pill ${r.durum === "approved" ? "pill-ok" : "pill-mute"}`}>
+          {DURUM_ETIKET[r.durum] ?? r.durum}
+        </span>
+      ),
       sortValue: (r) => r.durum,
     },
   ];
 
   if (!kullanilabilir) {
     return (
-      <div className="glass-card p-6">
-        <h3 className="text-sm font-semibold" style={{ color: "var(--cl-warn)" }}>
-          {yetkiEksik ? "İzin verisi için API yetkisi gerekiyor" : "İzin verisi alınamadı"}
-        </h3>
-
+      <Notice
+        ton="warn"
+        baslik={yetkiEksik ? "İzin verisi için API yetkisi gerekiyor" : "İzin verisi alınamadı"}
+      >
         {yetkiEksik ? (
-          <div className="mt-3 space-y-3 text-xs leading-relaxed" style={{ color: "var(--tx-secondary)" }}>
-            <p>
-              Kolay İK bağlantısı kuruldu ancak izin listesi uç noktası yetki hatası döndürdü:
-            </p>
+          <div className="space-y-2.5">
+            <p>Kolay İK bağlantısı kuruldu ancak izin listesi uç noktası yetki hatası döndürdü:</p>
             <p
-              className="rounded-lg px-3 py-2 font-mono text-[11px]"
-              style={{ background: "rgba(0,0,0,0.3)", color: "var(--cl-danger)" }}
+              className="px-3 py-2 font-mono text-[11px]"
+              style={{
+                background: "var(--sf-sunken)",
+                border: "1px solid var(--cl-danger-edge)",
+                borderRadius: "var(--r-input)",
+                color: "var(--cl-danger)",
+              }}
             >
               {hata ?? "Geçersiz API bilgisi"}
             </p>
             <p>
-              Bu hata token&apos;ın geçersiz olduğunu değil,{" "}
-              <span style={{ color: "var(--tx-primary)" }}>izin okuma kapsamının</span> kapalı
-              olduğunu gösterir. Kolay İK&apos;da{" "}
-              <span style={{ color: "var(--ac-sky)" }}>Ayarlar → Geliştirici Ayarları</span>&apos;ndan
-              bu token&apos;a <span className="font-mono">leave/list</span> yetkisini verip sayfayı
-              yenileyin; kod tarafında değişiklik gerekmiyor.
+              Bu hata token&apos;ın geçersiz olduğunu değil, <Vurgu>izin okuma kapsamının</Vurgu>{" "}
+              kapalı olduğunu gösterir. Kolay İK&apos;da{" "}
+              <span style={{ color: "var(--ac-sky)", fontWeight: 600 }}>
+                Ayarlar → Geliştirici Ayarları
+              </span>
+              &apos;ndan bu token&apos;a <span className="font-mono">leave/list</span> yetkisini
+              verip sayfayı yenileyin; kod tarafında değişiklik gerekmiyor.
             </p>
           </div>
         ) : (
-          <p className="mt-2 text-xs" style={{ color: "var(--tx-secondary)" }}>
-            {hata ?? "Bilinmeyen hata."}
-          </p>
+          <p>{hata ?? "Bilinmeyen hata."}</p>
         )}
-      </div>
+      </Notice>
     );
   }
 
   return (
     <div className="space-y-3">
-      <p className="text-[11px] leading-relaxed" style={{ color: "var(--tx-muted)" }}>
+      <p className="text-[11px] leading-relaxed" style={{ color: "var(--tx-secondary)" }}>
         İzin kayıtları Kolay İK&apos;dan canlı okunur; kişiler, Takımlar sayfasındaki &quot;Kolay İK
-        ile Eşitle&quot; ile alınan personel önbelleği üzerinden PDKS siciline bağlanır.
-        Çalışma süresi hesabı bu sayfadan <span style={{ color: "var(--tx-secondary)" }}>etkilenmez</span>{" "}
-        — izin bilgisi şimdilik yalnızca görüntüleniyor. İzinli günlerin eksik saat hesabından
-        düşülmesini isterseniz söylemeniz yeterli.
+        ile Eşitle&quot; ile alınan personel önbelleği üzerinden PDKS siciline bağlanır. Bu veri{" "}
+        <Vurgu>eksik saat hesabına doğrudan giriyor</Vurgu>: <Vurgu>ücretli</Vurgu> izin günleri
+        gereken günden düşülür (eksik yazmaz), <Vurgu>ücretsiz</Vurgu> izin günleri ise gereken gün
+        olarak sayılmaya devam eder ve eksik yazar.
       </p>
       <DataTable
         rows={filtered}

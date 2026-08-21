@@ -4,6 +4,7 @@ import { readerDirection } from "@/lib/engine/textNorm";
 import { utcIsoToWallClock } from "@/lib/engine/tz";
 import { fetchRecentRawRows } from "@/lib/db/queries/rawEvents";
 import PageHeader from "@/components/ui/PageHeader";
+import Notice, { Vurgu } from "@/components/ui/Notice";
 import LogTable, { type LogRow } from "@/components/log/LogTable";
 
 export const dynamic = "force-dynamic";
@@ -66,18 +67,11 @@ export default async function LogPage({
       />
       <div className="p-6">
         {truncated && (
-          <p
-            className="mb-3 rounded-xl p-2.5 text-sm"
-            style={{
-              background: "rgba(251,191,36,0.1)",
-              border: "1px solid rgba(251,191,36,0.25)",
-              color: "#fbbf24",
-            }}
-          >
-            Bu dönemde {total.toLocaleString("tr-TR")} kayıt var; performans için en yeni{" "}
-            {MAX_ROWS.toLocaleString("tr-TR")} kayıt gösteriliyor. Tamamını görmek için dönemi
-            daraltın.
-          </p>
+          <Notice ton="warn" className="mb-3">
+            Bu dönemde <Vurgu>{total.toLocaleString("tr-TR")}</Vurgu> kayıt var; performans için en
+            yeni <Vurgu>{MAX_ROWS.toLocaleString("tr-TR")}</Vurgu> kayıt gösteriliyor. Tamamını
+            görmek için dönemi daraltın.
+          </Notice>
         )}
         <LogTable rows={rows} showBuddyFlag />
       </div>

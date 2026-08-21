@@ -2,6 +2,8 @@
 
 import { useState, useTransition } from "react";
 import DataTable, { type Column } from "@/components/ui/DataTable";
+import Modal from "@/components/ui/Modal";
+import Notice, { Vurgu } from "@/components/ui/Notice";
 import { dkp, dks } from "@/lib/format";
 import { deleteCorrectionAction } from "@/app/actions/corrections";
 
@@ -35,7 +37,7 @@ export default function DuzeltmelerTable({ rows, canEdit }: { rows: DuzeltmeRow[
     {
       key: "sicil",
       header: "Sicil",
-      cell: (r) => <span style={{ color: "var(--tx-muted)" }}>{r.sicil}</span>,
+      cell: (r) => <span className="cell-code">{r.sicil}</span>,
       sortValue: (r) => Number(r.sicil) || r.sicil,
     },
     {
@@ -53,21 +55,14 @@ export default function DuzeltmelerTable({ rows, canEdit }: { rows: DuzeltmeRow[
     {
       key: "neden",
       header: "Neden",
-      cell: (r) => (
-        <span
-          className="rounded-full px-2 py-0.5 text-xs font-medium"
-          style={{ background: "var(--cl-warn-dim)", color: "var(--cl-warn)" }}
-        >
-          {r.neden}
-        </span>
-      ),
+      cell: (r) => <span className="pill pill-violet">{r.neden}</span>,
       sortValue: (r) => r.neden,
     },
     {
       key: "orig",
       header: "Önceki",
       align: "right",
-      cell: (r) => <span style={{ color: "var(--tx-muted)" }}>{dkp(r.origMin)}</span>,
+      cell: (r) => <span style={{ color: "var(--tx-secondary)" }}>{dkp(r.origMin)}</span>,
       sortValue: (r) => r.origMin,
     },
     {
@@ -103,7 +98,11 @@ export default function DuzeltmelerTable({ rows, canEdit }: { rows: DuzeltmeRow[
     {
       key: "ts",
       header: "Kayıt Zamanı",
-      cell: (r) => <span className="text-xs" style={{ color: "var(--tx-muted)" }}>{r.ts}</span>,
+      cell: (r) => (
+        <span className="text-[11px] tabular-nums" style={{ color: "var(--tx-secondary)" }}>
+          {r.ts}
+        </span>
+      ),
       sortValue: (r) => r.ts,
     },
     ...(canEdit
@@ -116,12 +115,9 @@ export default function DuzeltmelerTable({ rows, canEdit }: { rows: DuzeltmeRow[
               <button
                 onClick={() => setConfirm(r)}
                 disabled={pending}
-                className="rounded-lg px-2 py-0.5 text-xs transition-all duration-150 disabled:opacity-50"
-                style={{
-                  background: "rgba(248,113,113,0.08)",
-                  border: "1px solid rgba(248,113,113,0.2)",
-                  color: "var(--cl-danger)",
-                }}
+                title={`${r.adSoyad} · ${r.tarih} düzeltmesini sil`}
+                className="btn-base btn-danger"
+                style={{ height: 26, padding: "0 10px", fontSize: 11 }}
               >
                 Sil
               </button>
@@ -134,20 +130,13 @@ export default function DuzeltmelerTable({ rows, canEdit }: { rows: DuzeltmeRow[
   return (
     <>
       {error && (
-        <div
-          className="mb-3 rounded-xl p-3 text-sm"
-          style={{
-            background: "var(--cl-danger-dim)",
-            border: "1px solid rgba(248,113,113,0.25)",
-            color: "var(--cl-danger)",
-          }}
-        >
+        <Notice ton="danger" className="mb-3">
           {error}
-        </div>
+        </Notice>
       )}
-      <p className="mb-3 text-xs" style={{ color: "var(--tx-muted)" }}>
-        ✏️ Düzeltmeler Özet ve Günlük Detay hesaplarına doğrudan yansır. Bir gün için yeni düzeltme
-        girilirse eskisinin üzerine yazılır.
+      <p className="mb-3 text-[11px] leading-relaxed" style={{ color: "var(--tx-secondary)" }}>
+        Düzeltmeler Özet ve Günlük Detay hesaplarına <Vurgu>doğrudan yansır</Vurgu>. Bir gün için
+        yeni düzeltme girilirse eskisinin üzerine yazılır.
         {!canEdit && " Takım Lideri modunda silme yapılamaz."}
       </p>
       <DataTable
@@ -159,61 +148,32 @@ export default function DuzeltmelerTable({ rows, canEdit }: { rows: DuzeltmeRow[
         emptyText="Henüz düzeltme kaydı yok. Günlük Detay sayfasından bir güne tıklayarak düzeltme ekleyebilirsiniz."
       />
 
-      {/* Silme onay modalı */}
       {confirm && (
-        <div
-          className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
-          onClick={() => setConfirm(null)}
-        >
-          <div
-            className="modal-panel glass-modal relative w-full max-w-sm p-6"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-x-0 top-0 h-px rounded-t-[18px]"
-              style={{
-                background:
-                  "linear-gradient(90deg, transparent, rgba(248,113,113,0.5) 50%, transparent)",
-              }}
-            />
-
-            <div className="mb-2 text-lg font-semibold" style={{ color: "var(--tx-primary)" }}>
-              Düzeltmeyi Sil
-            </div>
-            <p className="mb-5 text-sm" style={{ color: "var(--tx-secondary)" }}>
-              <span style={{ color: "var(--tx-primary)" }}>{confirm.adSoyad}</span> · {confirm.tarih}{" "}
-              tarihli düzeltme silinecek. Bu günün süresi ham turnike verisine geri döner.
-            </p>
-
-            <div className="flex gap-2">
+        <Modal
+          baslik="Düzeltmeyi Sil"
+          onClose={() => setConfirm(null)}
+          genislik={400}
+          footer={
+            <>
+              <button onClick={() => setConfirm(null)} className="btn-ghost px-5" style={{ height: 34 }}>
+                İptal
+              </button>
               <button
                 onClick={() => remove(confirm)}
                 disabled={pending}
-                className="flex-1 rounded-xl py-2 text-sm font-semibold tracking-wide transition-all duration-150 disabled:opacity-50"
-                style={{
-                  background: "linear-gradient(135deg, #f87171, #ef4444)",
-                  color: "#fff",
-                  boxShadow: "0 4px 16px rgba(248,113,113,0.25)",
-                }}
+                className="btn-base btn-danger px-5"
+                style={{ height: 34 }}
               >
                 {pending ? "Siliniyor…" : "Sil"}
               </button>
-              <button
-                onClick={() => setConfirm(null)}
-                className="flex-1 rounded-xl py-2 text-sm transition-all duration-150"
-                style={{
-                  background: "rgba(255,255,255,0.05)",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  color: "var(--tx-secondary)",
-                }}
-              >
-                İptal
-              </button>
-            </div>
-          </div>
-        </div>
+            </>
+          }
+        >
+          <p className="text-xs leading-relaxed" style={{ color: "var(--tx-secondary)" }}>
+            <Vurgu>{confirm.adSoyad}</Vurgu> · <Vurgu>{confirm.tarih}</Vurgu> tarihli düzeltme
+            silinecek. Bu günün süresi ham turnike verisine geri döner.
+          </p>
+        </Modal>
       )}
     </>
   );

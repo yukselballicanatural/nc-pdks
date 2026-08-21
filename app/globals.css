@@ -464,6 +464,22 @@ select.input-glass option {
 }
 .btn-primary:active:not(:disabled) { transform: scale(0.965); }
 
+/* Yıkıcı birincil — silme/sıfırlama onayı. Birincil butonla AYNI geometri,
+   yalnızca rengi farklı: yan yana dururken yükseklikleri eşit kalsın. */
+.btn-danger {
+  background: var(--cl-danger-dim);
+  border: 1px solid var(--cl-danger-edge);
+  color: var(--cl-danger);
+  box-shadow: var(--sheen);
+}
+.btn-danger:hover:not(:disabled) {
+  background: var(--cl-danger);
+  border-color: var(--cl-danger);
+  color: var(--sf-strong);
+  transform: translateY(-1.5px);
+}
+.btn-danger:active:not(:disabled) { transform: scale(0.965); }
+
 /* İkincil / ghost — nötr aksiyon */
 .btn-ghost {
   background: var(--sf-3);

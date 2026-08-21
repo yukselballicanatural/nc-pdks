@@ -2,6 +2,7 @@ import { loadPdksData } from "@/lib/data/loadPdks";
 import { ALARM_TIPLERI } from "@/lib/engine/constants";
 import { formatGs, formatHms } from "@/lib/engine/mesaiGunu";
 import PageHeader from "@/components/ui/PageHeader";
+import Notice, { Vurgu } from "@/components/ui/Notice";
 import AlarmTable, { type AlarmRow } from "@/components/alarm/AlarmTable";
 
 export const dynamic = "force-dynamic";
@@ -51,18 +52,12 @@ export default async function PdksAlarmPage({
       />
       <div className="p-6">
         {truncated && (
-          <p
-            className="mb-3 rounded-xl p-2.5 text-sm"
-            style={{
-              background: "rgba(251,191,36,0.1)",
-              border: "1px solid rgba(251,191,36,0.25)",
-              color: "#fbbf24",
-            }}
-          >
-            Bu dönemde {alarmTotal.toLocaleString("tr-TR")} alarm var; performans için en yeni{" "}
-            {rows.length.toLocaleString("tr-TR")} tanesi listeleniyor (kartlardaki sayılar dönemin
-            tamamını gösterir). Tamamını incelemek için dönemi daraltın.
-          </p>
+          <Notice ton="warn" className="mb-3">
+            Bu dönemde <Vurgu>{alarmTotal.toLocaleString("tr-TR")}</Vurgu> alarm var; performans
+            için en yeni <Vurgu>{rows.length.toLocaleString("tr-TR")}</Vurgu> tanesi listeleniyor
+            (kartlardaki sayılar dönemin tamamını gösterir). Tamamını incelemek için dönemi
+            daraltın.
+          </Notice>
         )}
         <AlarmTable
           rows={rows}

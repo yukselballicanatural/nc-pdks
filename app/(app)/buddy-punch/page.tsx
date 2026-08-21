@@ -3,6 +3,7 @@ import { formatGs, formatHms } from "@/lib/engine/mesaiGunu";
 import { readerDirection } from "@/lib/engine/textNorm";
 import PageHeader from "@/components/ui/PageHeader";
 import StatCard from "@/components/ui/StatCard";
+import Notice, { Vurgu } from "@/components/ui/Notice";
 import LogTable, { type LogRow } from "@/components/log/LogTable";
 
 export const dynamic = "force-dynamic";
@@ -51,12 +52,12 @@ export default async function BuddyPunchPage({
         <div className="mb-4 grid gap-3 sm:grid-cols-3">
           <StatCard label="Şüpheli Kayıt" value={rows.length} icon="⚠️" tone="red" />
           <StatCard label="İlgili Personel" value={kisiSayisi} icon="👥" tone="amber" />
-          <StatCard label="Etkilenen Gün" value={gunSayisi} icon="📅" tone="slate" />
+          <StatCard label="Etkilenen Gün" value={gunSayisi} icon="📅" tone="sky" />
         </div>
-        <p className="mb-3 text-xs text-slate-500">
-          ⚠️ Bu kayıtlar hesaplamada tekilleştirilir (çift okutma çalışma süresini şişirmez);
-          burada sadece şüpheli davranış tespiti amacıyla listelenir.
-        </p>
+        <Notice ton="info" className="mb-3">
+          Bu kayıtlar hesaplamada <Vurgu>tekilleştirilir</Vurgu> — çift okutma çalışma süresini
+          şişirmez. Burada yalnızca şüpheli davranış tespiti amacıyla listeleniyor.
+        </Notice>
         <LogTable rows={rows} />
       </div>
     </>
