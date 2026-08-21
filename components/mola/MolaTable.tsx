@@ -2,6 +2,9 @@
 
 import { useMemo, useState } from "react";
 import DataTable, { type Column } from "@/components/ui/DataTable";
+import Modal from "@/components/ui/Modal";
+import Notice, { Vurgu } from "@/components/ui/Notice";
+import { AraRozeti } from "@/components/ui/AraTuru";
 import { dkp } from "@/lib/format";
 
 /** Bir turnike dışı aralığın tracker'a göre nasıl geçtiği. */
@@ -51,28 +54,25 @@ export interface TrackerDurum {
   kisiSayisi: number;
 }
 
-/** Tür bazlı renkler — Klinik/Toplantı işle ilgili, Mola/Yemek kişisel. */
-const ETIKET_RENK: Record<string, string> = {
-  Klinik: "#38bdf8",
-  Toplantı: "#a78bfa",
-  Mola: "#fbbf24",
-  Yemek: "#34d399",
-};
+/* Tür renkleri artık components/ui/AraTuru.tsx'te — üç ekranda aynı olsun diye
+   (eskiden burada "Yemek" yeşil, Günlük Detay'da sarıydı). */
+const Rozet = AraRozeti;
 
-function etiketRengi(e: string): string {
-  return ETIKET_RENK[e] ?? "#94a3b8";
-}
-
-function Rozet({ etiket, dk }: AralikAciklamasi) {
-  const renk = etiketRengi(etiket);
+/** Modal icindeki bolum basligi - sol aksan cubuklu (DESIGN_SYSTEM.md 11). */
+function BolumBasligi({
+  children,
+  renk = "var(--ac-sky)",
+}: {
+  children: React.ReactNode;
+  renk?: string;
+}) {
   return (
-    <span
-      className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium"
-      style={{ background: `${renk}1f`, border: `1px solid ${renk}44`, color: renk }}
-    >
-      {etiket}
-      <span className="tabular-nums opacity-80">{dkp(dk)}</span>
-    </span>
+    <div className="mb-2 flex items-center gap-2">
+      <span aria-hidden className="h-3 w-[3px] rounded-full" style={{ background: renk }} />
+      <span className="text-[12.5px] font-semibold" style={{ color: "var(--tx-primary)" }}>
+        {children}
+      </span>
+    </div>
   );
 }
 
@@ -247,43 +247,20 @@ export default function MolaTable({
       {/* Tracker durumu — veri yoksa/eksikse sessiz kalmıyoruz, çünkü boş bir
           "Nerede Geçti" kolonu "mola yok" gibi okunabilir. */}
       {tracker.hata ? (
-        <div
-          className="mb-3 rounded-xl p-3 text-xs leading-relaxed"
-          style={{
-            background: "rgba(248,113,113,0.1)",
-            border: "1px solid rgba(248,113,113,0.28)",
-            color: "var(--tx-secondary)",
-          }}
-        >
-          <strong style={{ color: "var(--cl-danger)" }}>Mola bildirimleri okunamadı:</strong>{" "}
-          {tracker.hata} — &quot;Nerede Geçti&quot; kolonu bu yüzden boş. Turnike süreleri
+        <Notice ton="danger" baslik="Mola bildirimleri okunamadı" className="mb-3">
+          {tracker.hata} — &quot;Nerede Geçti&quot; sütunu bu yüzden boş. Turnike süreleri
           etkilenmedi.
-        </div>
+        </Notice>
       ) : !tracker.kullanilabilir ? (
-        <div
-          className="mb-3 rounded-xl p-3 text-xs leading-relaxed"
-          style={{
-            background: "rgba(255,255,255,0.04)",
-            border: "1px solid rgba(255,255,255,0.1)",
-            color: "var(--tx-secondary)",
-          }}
-        >
-          Bu dönemde <strong style={{ color: "var(--tx-primary)" }}>mola bildirimi yok</strong>.
-          Çalışanlar uygulamadan mola/klinik/toplantı/yemek bildirdikçe turnike dışı sürelerin
-          nedeni bu ekranda kendiliğinden görünmeye başlar.
-        </div>
+        <Notice ton="info" className="mb-3">
+          Bu dönemde <Vurgu>mola bildirimi yok</Vurgu>. Çalışanlar uygulamadan
+          mola/klinik/toplantı/yemek bildirdikçe turnike dışı sürelerin nedeni bu ekranda
+          kendiliğinden görünmeye başlar.
+        </Notice>
       ) : (
-        <div
-          className="mb-3 rounded-xl p-3 text-xs leading-relaxed"
-          style={{
-            background: "rgba(6,214,160,0.07)",
-            border: "1px solid rgba(6,214,160,0.2)",
-            color: "var(--tx-secondary)",
-          }}
-        >
-          Dönemde <span style={{ color: "var(--tx-primary)" }}>{tracker.olaySayisi}</span> mola
-          bildirimi okundu, <span style={{ color: "var(--tx-primary)" }}>{tracker.kisiSayisi}</span>{" "}
-          kişiye bağlandı.
+        <Notice ton="ok" className="mb-3">
+          Dönemde <Vurgu>{tracker.olaySayisi}</Vurgu> mola bildirimi okundu,{" "}
+          <Vurgu>{tracker.kisiSayisi}</Vurgu> kişiye bağlandı.
           {tracker.eslesmeyenOlay > 0 && (
             <>
               {" "}
@@ -302,11 +279,11 @@ export default function MolaTable({
               (mola başlatılmış ama bitirilmemiş) — süresi bilinmediği için hesaba katılmadı.
             </>
           )}
-        </div>
+        </Notice>
       )}
 
-      <p className="mb-3 text-xs leading-relaxed" style={{ color: "var(--tx-muted)" }}>
-        ☕ <strong style={{ color: "var(--tx-secondary)" }}>Turnike Dışı</strong>: binadan
+      <p className="mb-3 text-[11px] leading-relaxed" style={{ color: "var(--tx-secondary)" }}>
+        <strong style={{ color: "var(--tx-primary)" }}>Turnike Dışı</strong>: binadan
         çıkılan tüm süre. <strong style={{ color: "var(--cl-ok)" }}>Çalışma Sayıldı</strong>:
         bunun Klinik + Toplantı olarak bildirilen kısmı — eksik saat hesabında çalışma sayılır.{" "}
         <strong style={{ color: "var(--cl-warn)" }}>Mola Sayıldı</strong>: eksik saat hesabına
@@ -335,78 +312,63 @@ export default function MolaTable({
         pageSize={200}
       />
 
-      {/* Modal */}
       {detay && (
-        <div
-          className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
-          onClick={() => setDetay(null)}
-        >
-          <div
-            className="modal-panel glass-modal relative max-h-[85vh] w-full max-w-xl overflow-y-auto p-6"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-x-0 top-0 h-px rounded-t-[18px]"
-              style={{
-                background:
-                  "linear-gradient(90deg, transparent, rgba(6,214,160,0.5) 50%, transparent)",
-              }}
-            />
-
-            <div className="text-lg font-semibold" style={{ color: "var(--tx-primary)" }}>
-              {detay.adSoyad}
-            </div>
-            <div className="mb-5 text-sm" style={{ color: "var(--tx-secondary)" }}>
-              {detay.tarih} · {detay.vardiya} · Turnike içi {dkp(detay.net)} / dışı{" "}
-              {dkp(detay.mola)}
+        <Modal
+          baslik={detay.adSoyad}
+          altBaslik={
+            <>
+              {detay.tarih} · {detay.vardiya} · Turnike içi {dkp(detay.net)} / dışı {dkp(detay.mola)}
               {detay.krediDk > 0 && (
                 <>
                   {" · "}
-                  <span style={{ color: "var(--cl-ok)" }}>
+                  <span style={{ color: "var(--cl-ok)", fontWeight: 600 }}>
                     {dkp(detay.krediDk)} çalışma sayıldı
                   </span>
                   {" · "}
-                  <span style={{ color: "var(--cl-warn)" }}>
+                  <span style={{ color: "var(--cl-warn)", fontWeight: 600 }}>
                     {dkp(detay.molaSayilan)} mola sayıldı
                   </span>
                 </>
               )}
+            </>
+          }
+          onClose={() => setDetay(null)}
+          genislik={580}
+          footer={
+            <button onClick={() => setDetay(null)} className="btn-ghost px-5" style={{ height: 34 }}>
+              Kapat
+            </button>
+          }
+        >
+          {detay.nedenOzet.length > 0 && (
+            <div className="mb-4">
+              <BolumBasligi>Turnike Dışı Süre Nerede Geçti</BolumBasligi>
+              <div className="flex flex-wrap gap-1.5">
+                {detay.nedenOzet.map((n) => (
+                  <Rozet key={n.etiket} {...n} />
+                ))}
+              </div>
+              {detay.aciklanmayanDk > 0 && (
+                <div className="mt-1.5 text-[11px]" style={{ color: "var(--cl-warn)" }}>
+                  {dkp(detay.aciklanmayanDk)} için bildirim yok.
+                </div>
+              )}
             </div>
+          )}
 
-            {/* Günün neden özeti */}
-            {detay.nedenOzet.length > 0 && (
-              <>
-                <div className="mb-2 text-sm font-semibold" style={{ color: "var(--tx-primary)" }}>
-                  Turnike Dışı Süre Nerede Geçti
-                </div>
-                <div className="mb-1.5 flex flex-wrap gap-1.5">
-                  {detay.nedenOzet.map((n) => (
-                    <Rozet key={n.etiket} {...n} />
-                  ))}
-                </div>
-                {detay.aciklanmayanDk > 0 && (
-                  <div className="mb-5 text-xs" style={{ color: "var(--cl-warn)" }}>
-                    {dkp(detay.aciklanmayanDk)} için bildirim yok.
-                  </div>
-                )}
-                {detay.aciklanmayanDk === 0 && <div className="mb-5" />}
-              </>
-            )}
-
-            {/* Çalışma aralıkları */}
-            <div className="mb-2 text-sm font-semibold" style={{ color: "var(--cl-ok)" }}>
+          <div className="mb-4">
+            <BolumBasligi renk="var(--cl-ok)">
               Turnike İçi Çalışma Aralıkları ({detay.calismaAraliklari.length})
-            </div>
-            <ul className="mb-5 space-y-1 text-sm">
+            </BolumBasligi>
+            <ul className="space-y-1 text-xs">
               {detay.calismaAraliklari.map((a, i) => (
                 <li
                   key={i}
-                  className="rounded-lg px-3 py-1.5 tabular-nums"
+                  className="px-3 py-1.5 tabular-nums"
                   style={{
-                    background: "rgba(52,211,153,0.06)",
-                    border: "1px solid rgba(52,211,153,0.12)",
+                    background: "var(--cl-ok-dim)",
+                    border: "1px solid var(--cl-ok-edge)",
+                    borderRadius: "var(--r-xs)",
                     color: "var(--tx-primary)",
                   }}
                 >
@@ -417,19 +379,21 @@ export default function MolaTable({
                 <li style={{ color: "var(--tx-disabled)" }}>Yok</li>
               )}
             </ul>
+          </div>
 
-            {/* Mola aralıkları — her biri kendi açıklamasıyla */}
-            <div className="mb-2 text-sm font-semibold" style={{ color: "var(--cl-warn)" }}>
+          <div className="mb-4">
+            <BolumBasligi renk="var(--cl-warn)">
               Turnike Dışında Kalınan Aralıklar ({detay.molaAraliklari.length})
-            </div>
-            <ul className="mb-5 space-y-1 text-sm">
+            </BolumBasligi>
+            <ul className="space-y-1 text-xs">
               {detay.molaAraliklari.map((m, i) => (
                 <li
                   key={i}
-                  className="rounded-lg px-3 py-1.5"
+                  className="px-3 py-1.5"
                   style={{
-                    background: "rgba(251,191,36,0.06)",
-                    border: "1px solid rgba(251,191,36,0.12)",
+                    background: "var(--cl-warn-dim)",
+                    border: "1px solid var(--cl-warn-edge)",
+                    borderRadius: "var(--r-xs)",
                     color: "var(--tx-primary)",
                   }}
                 >
@@ -442,7 +406,7 @@ export default function MolaTable({
                         ))}
                       </span>
                     ) : (
-                      <span className="text-[11px]" style={{ color: "var(--tx-muted)" }}>
+                      <span className="text-[10.5px]" style={{ color: "var(--tx-secondary)" }}>
                         bildirim yok
                       </span>
                     )}
@@ -453,44 +417,21 @@ export default function MolaTable({
                 <li style={{ color: "var(--tx-disabled)" }}>Yok</li>
               )}
             </ul>
-
-            {/* Diğer okuyucular */}
-            {detay.digerOkuyucular.length > 0 && (
-              <>
-                <div className="mb-2 text-sm font-semibold" style={{ color: "var(--tx-primary)" }}>
-                  Turnike Dışı Okutulan Okuyucular
-                </div>
-                <div className="mb-5 flex flex-wrap gap-1.5">
-                  {detay.digerOkuyucular.map((o) => (
-                    <span
-                      key={o}
-                      className="rounded-lg px-2 py-0.5 text-xs"
-                      style={{
-                        background: "rgba(255,255,255,0.06)",
-                        border: "1px solid rgba(255,255,255,0.1)",
-                        color: "var(--tx-secondary)",
-                      }}
-                    >
-                      {o}
-                    </span>
-                  ))}
-                </div>
-              </>
-            )}
-
-            <button
-              onClick={() => setDetay(null)}
-              className="w-full rounded-xl py-2 text-sm transition-all duration-150"
-              style={{
-                background: "rgba(255,255,255,0.05)",
-                border: "1px solid rgba(255,255,255,0.1)",
-                color: "var(--tx-secondary)",
-              }}
-            >
-              Kapat
-            </button>
           </div>
-        </div>
+
+          {detay.digerOkuyucular.length > 0 && (
+            <div>
+              <BolumBasligi>Turnike Dışı Okutulan Okuyucular</BolumBasligi>
+              <div className="flex flex-wrap gap-1.5">
+                {detay.digerOkuyucular.map((o) => (
+                  <span key={o} className="pill pill-mute">
+                    {o}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </Modal>
       )}
     </>
   );

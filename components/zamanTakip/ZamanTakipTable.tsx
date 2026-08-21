@@ -2,21 +2,9 @@
 
 import { useMemo, useState } from "react";
 import DataTable, { type Column } from "@/components/ui/DataTable";
+import { araTuruPill } from "@/components/ui/AraTuru";
 import { dkp } from "@/lib/format";
 import type { TrackerLogRow } from "@/lib/data/loadTrackerLog";
-
-/** Tür bazlı renkler — Mola Detayı'yla aynı görsel dil. */
-const TUR_RENK: Record<string, string> = {
-  Mesai: "#38bdf8",
-  Klinik: "#38bdf8",
-  Toplantı: "#a78bfa",
-  Mola: "#fbbf24",
-  Yemek: "#34d399",
-};
-
-function turRengi(tur: string): string {
-  return TUR_RENK[tur] ?? "#94a3b8";
-}
 
 const YOL_ADI: Record<string, string> = {
   zuid: "Zoho kimliği",
@@ -60,9 +48,7 @@ export default function ZamanTakipTable({ rows }: { rows: TrackerLogRow[] }) {
         <span className="font-medium" style={r.eslesme === null ? { color: "var(--tx-muted)" } : undefined}>
           {r.adSoyad}
           {r.eslesme === null && (
-            <span className="ml-1.5 rounded px-1 py-0.5 text-[10px]" style={{ background: "rgba(248,113,113,0.12)", color: "#f87171" }}>
-              eşleşmedi
-            </span>
+            <span className="pill pill-danger ml-1.5">eşleşmedi</span>
           )}
         </span>
       ),
@@ -71,30 +57,20 @@ export default function ZamanTakipTable({ rows }: { rows: TrackerLogRow[] }) {
     {
       key: "sicil",
       header: "Sicil",
-      cell: (r) => <span style={{ color: "var(--tx-muted)" }}>{r.sicil ?? "-"}</span>,
+      cell: (r) => <span className="cell-code">{r.sicil ?? "-"}</span>,
       sortValue: (r) => (r.sicil ? Number(r.sicil) || r.sicil : "zzz"),
     },
     {
       key: "unvan",
       header: "Ünvan",
-      cell: (r) => <span style={{ color: "var(--tx-muted)" }}>{r.unvan ?? "-"}</span>,
+      cell: (r) => <span style={{ color: "var(--tx-secondary)" }}>{r.unvan ?? "-"}</span>,
       sortValue: (r) => r.unvan ?? "",
     },
     { key: "tarih", header: "Tarih", cell: (r) => r.tarih, sortValue: (r) => r.tarih.split(".").reverse().join("-") },
     {
       key: "tur",
       header: "Tür",
-      cell: (r) => {
-        const renk = turRengi(r.tur);
-        return (
-          <span
-            className="inline-flex items-center rounded-md px-1.5 py-0.5 text-[11px] font-medium"
-            style={{ background: `${renk}1f`, border: `1px solid ${renk}44`, color: renk }}
-          >
-            {r.tur}
-          </span>
-        );
-      },
+      cell: (r) => <span className={`pill ${araTuruPill(r.tur)}`}>{r.tur}</span>,
       sortValue: (r) => r.tur,
     },
     {
@@ -127,7 +103,7 @@ export default function ZamanTakipTable({ rows }: { rows: TrackerLogRow[] }) {
       key: "eslesme",
       header: "Nasıl Bulundu",
       cell: (r) => (
-        <span className="text-xs" style={{ color: "var(--tx-muted)" }}>
+        <span className="text-[11px]" style={{ color: "var(--tx-secondary)" }}>
           {r.eslesme ? YOL_ADI[r.eslesme] ?? r.eslesme : "-"}
         </span>
       ),
@@ -144,12 +120,8 @@ export default function ZamanTakipTable({ rows }: { rows: TrackerLogRow[] }) {
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
-            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium transition-colors"
-            style={{
-              background: "rgba(56,189,248,0.12)",
-              border: "1px solid rgba(56,189,248,0.32)",
-              color: "#38bdf8",
-            }}
+            className="pill pill-sky"
+            style={{ textDecoration: "none" }}
           >
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 1 1 18 0z" />
@@ -166,7 +138,7 @@ export default function ZamanTakipTable({ rows }: { rows: TrackerLogRow[] }) {
 
   return (
     <>
-      <p className="mb-3 text-xs leading-relaxed" style={{ color: "var(--tx-muted)" }}>
+      <p className="mb-3 text-[11px] leading-relaxed" style={{ color: "var(--tx-secondary)" }}>
         Uygulamadan bildirilen mesai (check-in/check-out) ve mola/klinik/toplantı/yemek
         oturumları — başlangıç, bitiş ve süresiyle. &quot;Eşleşmedi&quot; etiketi olan kayıtlar
         henüz hiçbir sicile bağlanamadı; sistemi kullanan kişinin Zoho kaydı ya da satış

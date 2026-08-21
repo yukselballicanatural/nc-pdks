@@ -123,40 +123,77 @@ export default async function DashboardPage({
         range={range}
       />
       <div className="space-y-4 p-6">
+        {/* ── Ana göstergeler ── */}
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
             label="Turnike Kullanan Personel"
             value={people.length}
             icon="👥"
-            tone="teal"
-            hint={`${isGunu} iş günü · ${turnikesiz} kişi turnike kullanmıyor (hariç)`}
+            tone="sky"
+            hint={`${isGunu} iş günü${turnikesiz > 0 ? ` · ${turnikesiz} kişi turnike kullanmıyor` : ""}`}
           />
-          <StatCard label="Toplam Çalışma" value={`${(totalNet / 60).toFixed(0)} sa`} icon="⏰" tone="green" hint={dkp(totalNet)} />
-          <StatCard label="Toplam Eksik" value={`${(totalEksik / 60).toFixed(0)} sa`} icon="📉" tone="red" hint={`${eksikOlan + hicGelmeyen} kişide eksik var`} />
-          <StatCard label="Toplam Fazla Mesai" value={`${(totalFazla / 60).toFixed(0)} sa`} icon="📈" tone="amber" hint={`${tamamOlan} kişi hedefi tuttu`} />
+          <StatCard
+            label="Toplam Çalışma"
+            value={`${(totalNet / 60).toFixed(0)} sa`}
+            icon="⏱"
+            tone="green"
+            hint={dkp(totalNet)}
+          />
+          <StatCard
+            label="Toplam Eksik"
+            value={`${(totalEksik / 60).toFixed(0)} sa`}
+            icon="📉"
+            tone="red"
+            hint={`${eksikOlan + hicGelmeyen} kişide eksik var`}
+          />
+          <StatCard
+            label="Toplam Fazla Mesai"
+            value={`${(totalFazla / 60).toFixed(0)} sa`}
+            icon="📈"
+            tone="amber"
+            hint={`${tamamOlan} kişi hedefi tuttu`}
+          />
         </div>
 
         {turnikesiz > 0 && (
-          <div className="rounded border border-slate-700 bg-slate-800/40 p-3 text-xs text-slate-400">
-            Bu dönemde <span className="text-slate-200">{turnikesiz}</span> kişinin hiç turnike kaydı
-            yok (teknik/depo/klinik personeli turnike dışı kapıları kullanıyor). Çalışma süresi
-            turnike giriş/çıkışına göre hesaplandığı için bu kişiler yukarıdaki toplamlara{" "}
-            <span className="text-slate-200">dahil edilmedi</span> — aksi halde eksik saat rakamları
-            yanıltıcı olurdu. Listeyi Özet sayfasında görebilirsiniz.
+          <div
+            className="flex gap-2.5 p-3.5 text-[11.5px] leading-relaxed"
+            style={{
+              background: "var(--cl-info-dim)",
+              border: "1px solid var(--cl-info-edge)",
+              borderRadius: "var(--r-sm)",
+              color: "var(--tx-secondary)",
+            }}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="mt-px shrink-0" style={{ color: "var(--cl-info)" }}>
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 16v-4M12 8h.01" />
+            </svg>
+            <span>
+              Bu dönemde{" "}
+              <strong style={{ color: "var(--tx-primary)", fontWeight: 600 }}>{turnikesiz}</strong>{" "}
+              kişinin hiç turnike kaydı yok (teknik/depo/klinik personeli turnike dışı kapıları
+              kullanıyor). Çalışma süresi turnike giriş/çıkışına göre hesaplandığı için bu kişiler
+              yukarıdaki toplamlara{" "}
+              <strong style={{ color: "var(--tx-primary)", fontWeight: 600 }}>dahil edilmedi</strong>{" "}
+              — aksi hâlde eksik saat rakamları yanıltıcı olurdu. Listeyi Özet sayfasında
+              görebilirsiniz.
+            </span>
           </div>
         )}
 
+        {/* ── Denetim göstergeleri ── */}
         <div className="grid gap-3 sm:grid-cols-3">
           <StatCard
             label="Turnikesiz Çıkış"
             value={(alarmCounts.TURNIKESIZ_CIKIS ?? 0).toLocaleString("tr-TR")}
-            icon="🚨"
+            icon="🚪"
             tone="red"
           />
           <StatCard
             label="Kart Basma Şüphesi"
             value={(alarmCounts.KART_BASMA ?? 0).toLocaleString("tr-TR")}
-            icon="👥"
+            icon="🪪"
             tone="amber"
           />
           <StatCard
@@ -174,9 +211,13 @@ export default async function DashboardPage({
           <TlEksikChart data={tlData} />
         </div>
 
-        <p className="text-xs" style={{ color: "var(--tx-muted)" }}>
-          Buddy punch şüpheli kayıt: {buddyTotal.toLocaleString("tr-TR")} · Vardiya bilgisi henüz
-          sisteme girilmediği için tüm personel gündüz vardiyası (450 dk) kabul edilmektedir.
+        <p className="text-[11px] leading-relaxed" style={{ color: "var(--tx-secondary)" }}>
+          Buddy punch şüpheli kayıt:{" "}
+          <strong style={{ color: "var(--tx-primary)", fontWeight: 600 }}>
+            {buddyTotal.toLocaleString("tr-TR")}
+          </strong>{" "}
+          · Vardiya bilgisi henüz sisteme girilmediği için tüm personel gündüz vardiyası (450 dk)
+          kabul edilmektedir.
         </p>
       </div>
     </>

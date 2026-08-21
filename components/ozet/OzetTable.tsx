@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 import DataTable, { type Column } from "@/components/ui/DataTable";
+import Modal from "@/components/ui/Modal";
+import Notice, { Vurgu } from "@/components/ui/Notice";
 import { dkp, dks } from "@/lib/format";
 
 export interface OzetRow {
@@ -176,36 +178,17 @@ export default function OzetTable({
       cell: (r) =>
         r.turnikeKaydi === 0 ? (
           <span
-            className="rounded-full px-2 py-0.5 text-xs"
-            style={{
-              background: "rgba(255,255,255,0.06)",
-              color: "var(--tx-secondary)",
-            }}
+            className="pill pill-mute"
             title="Bu kişinin dönemde hiç turnike kaydı yok — turnike dışı kapıları kullanıyor, bu yüzden turnike bazlı çalışma süresi hesaplanamaz."
           >
             Turnike kaydı yok
           </span>
         ) : r.gelinenGun === 0 ? (
-          <span
-            className="rounded-full px-2 py-0.5 text-xs font-medium"
-            style={{ background: "var(--cl-danger-dim)", color: "var(--cl-danger)" }}
-          >
-            Hiç gelmemiş
-          </span>
+          <span className="pill pill-violet">Hiç gelmemiş</span>
         ) : r.netFark < 0 ? (
-          <span
-            className="rounded-full px-2 py-0.5 text-xs font-medium"
-            style={{ background: "var(--cl-danger-dim)", color: "var(--cl-danger)" }}
-          >
-            Eksik
-          </span>
+          <span className="pill pill-danger">Eksik</span>
         ) : (
-          <span
-            className="rounded-full px-2 py-0.5 text-xs font-medium"
-            style={{ background: "var(--cl-ok-dim)", color: "var(--cl-ok)" }}
-          >
-            Tamam
-          </span>
+          <span className="pill pill-ok">Tamam</span>
         ),
       sortValue: (r) => (r.turnikeKaydi === 0 ? -1 : r.gelinenGun === 0 ? 0 : r.netFark < 0 ? 1 : 2),
     },
@@ -214,43 +197,29 @@ export default function OzetTable({
   return (
     <>
       {turnikesizSayisi > 0 && (
-        <div
-          className="mb-3 rounded-xl p-3 text-xs"
-          style={{
-            background: "rgba(255,255,255,0.04)",
-            border: "1px solid rgba(255,255,255,0.08)",
-            color: "var(--tx-secondary)",
-          }}
-        >
-          Bu dönemde{" "}
-          <span style={{ color: "var(--tx-primary)" }}>{turnikesizSayisi}</span> kişinin hiç turnike
-          kaydı yok (teknik/depo/klinik personeli genelde &quot;Personel GİRİŞ&quot;, &quot;Soyunma
-          Odası&quot;, &quot;Lobi geçiş&quot; kapılarını kullanıyor). Turnike bazlı çalışma süresi bu
-          kişiler için hesaplanamaz;{" "}
-          <span style={{ color: "var(--tx-primary)" }}>Turnike kaydı yok</span> olarak
-          işaretlendiler. Sadece turnike kullananları görmek için durum filtresinden{" "}
-          <span style={{ color: "var(--tx-primary)" }}>Turnike Kullananlar</span> seçin.
-        </div>
+        <Notice ton="info" className="mb-3">
+          Bu dönemde <Vurgu>{turnikesizSayisi}</Vurgu> kişinin hiç turnike kaydı yok
+          (teknik/depo/klinik personeli genelde &quot;Personel GİRİŞ&quot;, &quot;Soyunma
+          Odası&quot;, &quot;Lobi geçiş&quot; kapılarını kullanıyor). Turnike bazlı çalışma süresi
+          bu kişiler için hesaplanamaz; <Vurgu>Turnike kaydı yok</Vurgu> olarak işaretlendiler.
+          Sadece turnike kullananları görmek için durum filtresinden{" "}
+          <Vurgu>Turnike Kullananlar</Vurgu> seçin.
+        </Notice>
       )}
+
       {izinVerisiVar ? (
-        <p className="mb-3 text-xs" style={{ color: "var(--tx-muted)" }}>
-          💡 Sütun başlığına tıkla = sırala · Satıra tıkla = eksik günleri gör ·{" "}
-          <span style={{ color: "var(--ac-cyan)" }}>−Ni</span> = o kadar gün ücretli izin
-          (yıllık/raporlu/mazeret) gereken günden düşüldü. Ücretsiz izin düşülmez, eksik yazar.
+        <p className="mb-3 text-[11px] leading-relaxed" style={{ color: "var(--tx-secondary)" }}>
+          Sütun başlığına tıkla = sırala · Satıra tıkla = eksik günleri gör ·{" "}
+          <span style={{ color: "var(--ac-cyan)", fontWeight: 600 }}>−Ni</span> = o kadar gün
+          ücretli izin (yıllık/raporlu/mazeret) gereken günden düşüldü. Ücretsiz izin düşülmez,
+          eksik yazar.
         </p>
       ) : (
-        <p
-          className="mb-3 rounded-xl px-3 py-2 text-xs leading-relaxed"
-          style={{
-            background: "rgba(251,191,36,0.1)",
-            border: "1px solid rgba(251,191,36,0.25)",
-            color: "#fbbf24",
-          }}
-        >
-          Kolay İK izin verisi şu an okunamıyor; eksik saat hesabı izinleri
-          <span style={{ color: "var(--tx-primary)" }}> dikkate almıyor</span>. Ücretli izinli günler
-          de eksik olarak görünür. Bağlantı düzeldiğinde düzelir (bkz. İzinler sayfası).
-        </p>
+        <Notice ton="warn" baslik="İzin verisi okunamıyor" className="mb-3">
+          Kolay İK izin verisi şu an alınamıyor; eksik saat hesabı izinleri{" "}
+          <Vurgu>dikkate almıyor</Vurgu>. Ücretli izinli günler de eksik olarak görünür. Bağlantı
+          düzeldiğinde kendiliğinden toparlar (bkz. İzinler sayfası).
+        </Notice>
       )}
       <DataTable
         rows={filtered}
@@ -279,143 +248,120 @@ export default function OzetTable({
         }
       />
 
-      {/* Modal */}
       {detay && (
-        <div
-          className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
-          onClick={() => setDetay(null)}
-        >
-          <div
-            className="modal-panel glass-modal max-h-[80vh] w-full max-w-lg overflow-y-auto p-6"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal üst parıltı */}
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-x-0 top-0 h-px rounded-t-[18px]"
-              style={{
-                background:
-                  "linear-gradient(90deg, transparent, rgba(56,189,248,0.4) 50%, transparent)",
-              }}
-            />
-
-            <div
-              className="mb-1 text-lg font-semibold"
-              style={{ color: "var(--tx-primary)" }}
-            >
-              {detay.adSoyad}
-            </div>
-            <div className="mb-5 text-sm" style={{ color: "var(--tx-secondary)" }}>
-              {detay.unvan} · Sicil {detay.sicil}
-            </div>
-
-            <div className="mb-4 grid grid-cols-2 gap-3 text-sm">
-              <div
-                className="rounded-xl p-3"
-                style={{
-                  background: "rgba(56,189,248,0.06)",
-                  border: "1px solid rgba(56,189,248,0.15)",
-                }}
-              >
-                <div className="mb-1 text-xs" style={{ color: "var(--tx-muted)" }}>
-                  Turnike İçi (Net)
-                </div>
-                <div className="tabular-nums font-semibold" style={{ color: "var(--tx-primary)" }}>
-                  {dkp(detay.turnikeIci)}
-                </div>
-              </div>
-              <div
-                className="rounded-xl p-3"
-                style={{
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                }}
-              >
-                <div className="mb-1 text-xs" style={{ color: "var(--tx-muted)" }}>
-                  Beklenen
-                </div>
-                <div className="tabular-nums font-semibold" style={{ color: "var(--tx-primary)" }}>
-                  {dkp(detay.beklenenNet)}
-                </div>
-              </div>
-            </div>
-
-            <div
-              className="mb-3 text-sm font-semibold"
-              style={{ color: "var(--tx-primary)" }}
-            >
-              Gelmediği İş Günleri ({detay.eksikGunler.length})
-            </div>
-            {(detay.izinliGun > 0 || detay.ucretsizIzinGun > 0) && (
-              <p className="mb-2 text-xs leading-relaxed" style={{ color: "var(--tx-secondary)" }}>
-                {detay.izinliGun > 0 && (
-                  <>
-                    <span style={{ color: "var(--ac-cyan)" }}>{detay.izinliGun} gün ücretli izin</span>{" "}
-                    gereken günden düşüldü, eksik saate yansımadı.{" "}
-                  </>
-                )}
-                {detay.ucretsizIzinGun > 0 && (
-                  <>
-                    <span style={{ color: "var(--cl-warn)" }}>
-                      {detay.ucretsizIzinGun} gün ücretsiz izin
-                    </span>{" "}
-                    eksik saat olarak sayıldı.
-                  </>
-                )}
-              </p>
-            )}
-            {detay.eksikGunler.length === 0 ? (
-              <p className="text-sm" style={{ color: "var(--cl-ok)" }}>
-                Tüm iş günlerinde kayıt var.
-              </p>
-            ) : (
-              <ul className="space-y-1 text-sm">
-                {detay.eksikGunler.map((d) => (
-                  <li
-                    key={d.gs}
-                    className="flex justify-between rounded-lg px-3 py-1.5"
-                    style={{
-                      background: "rgba(248,113,113,0.06)",
-                      border: "1px solid rgba(248,113,113,0.1)",
-                    }}
-                  >
-                    <span style={{ color: "var(--tx-primary)" }}>{d.gs}</span>
-                    <span className="flex items-center gap-2">
-                      {d.izin === "ucretsiz" && (
-                        <span
-                          title="Ücretsiz izin — eksik saat olarak sayılır"
-                          className="rounded-full px-1.5 py-0.5 text-[10px]"
-                          style={{
-                            background: "rgba(251,191,36,0.12)",
-                            border: "1px solid rgba(251,191,36,0.3)",
-                            color: "#fbbf24",
-                          }}
-                        >
-                          ücretsiz izin
-                        </span>
-                      )}
-                      <span style={{ color: "var(--tx-muted)" }}>{d.gun}</span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            <button
-              onClick={() => setDetay(null)}
-              className="mt-5 w-full rounded-xl py-2 text-sm transition-all duration-150"
-              style={{
-                background: "rgba(255,255,255,0.05)",
-                border: "1px solid rgba(255,255,255,0.1)",
-                color: "var(--tx-secondary)",
-              }}
-            >
+        <Modal
+          baslik={detay.adSoyad}
+          altBaslik={`${detay.unvan} · Sicil ${detay.sicil}`}
+          onClose={() => setDetay(null)}
+          genislik={520}
+          footer={
+            <button onClick={() => setDetay(null)} className="btn-ghost px-5" style={{ height: 34 }}>
               Kapat
             </button>
+          }
+        >
+          <div className="mb-4 grid grid-cols-3 gap-2.5">
+            <OzetKutu etiket="Turnike İçi" deger={dkp(detay.turnikeIci)} ton="sky" />
+            <OzetKutu etiket="Beklenen" deger={dkp(detay.beklenenNet)} />
+            <OzetKutu
+              etiket="Fark"
+              deger={dks(detay.netFark)}
+              ton={detay.netFark < 0 ? "danger" : "ok"}
+            />
           </div>
-        </div>
+
+          <div className="mb-2 text-[13px] font-semibold" style={{ color: "var(--tx-primary)" }}>
+            Gelmediği İş Günleri ({detay.eksikGunler.length})
+          </div>
+
+          {(detay.izinliGun > 0 || detay.ucretsizIzinGun > 0) && (
+            <p className="mb-2.5 text-[11.5px] leading-relaxed" style={{ color: "var(--tx-secondary)" }}>
+              {detay.izinliGun > 0 && (
+                <>
+                  <span style={{ color: "var(--ac-cyan)", fontWeight: 600 }}>
+                    {detay.izinliGun} gün ücretli izin
+                  </span>{" "}
+                  gereken günden düşüldü, eksik saate yansımadı.{" "}
+                </>
+              )}
+              {detay.ucretsizIzinGun > 0 && (
+                <>
+                  <span style={{ color: "var(--cl-warn)", fontWeight: 600 }}>
+                    {detay.ucretsizIzinGun} gün ücretsiz izin
+                  </span>{" "}
+                  eksik saat olarak sayıldı.
+                </>
+              )}
+            </p>
+          )}
+
+          {detay.eksikGunler.length === 0 ? (
+            <p className="text-xs" style={{ color: "var(--cl-ok)" }}>
+              Tüm iş günlerinde kayıt var.
+            </p>
+          ) : (
+            <ul className="space-y-1">
+              {detay.eksikGunler.map((d) => (
+                <li
+                  key={d.gs}
+                  className="flex items-center justify-between px-3 py-1.5 text-xs"
+                  style={{
+                    background: "var(--cl-danger-dim)",
+                    border: "1px solid var(--cl-danger-edge)",
+                    borderRadius: "var(--r-xs)",
+                  }}
+                >
+                  <span className="tabular-nums" style={{ color: "var(--tx-primary)" }}>
+                    {d.gs}
+                  </span>
+                  <span className="flex items-center gap-2">
+                    {d.izin === "ucretsiz" && (
+                      <span className="pill pill-warn" title="Ücretsiz izin — eksik saat olarak sayılır">
+                        ücretsiz izin
+                      </span>
+                    )}
+                    <span style={{ color: "var(--tx-secondary)" }}>{d.gun}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Modal>
       )}
     </>
+  );
+}
+
+/** Modal içindeki küçük ölçüm kutusu. */
+function OzetKutu({
+  etiket,
+  deger,
+  ton,
+}: {
+  etiket: string;
+  deger: string;
+  ton?: "sky" | "ok" | "danger";
+}) {
+  const renk =
+    ton === "sky"
+      ? { bg: "var(--ac-sky-dim)", edge: "var(--ac-sky-edge)", fg: "var(--ac-sky)" }
+      : ton === "ok"
+        ? { bg: "var(--cl-ok-dim)", edge: "var(--cl-ok-edge)", fg: "var(--cl-ok)" }
+        : ton === "danger"
+          ? { bg: "var(--cl-danger-dim)", edge: "var(--cl-danger-edge)", fg: "var(--cl-danger)" }
+          : { bg: "var(--sf-2)", edge: "var(--edge-soft)", fg: "var(--tx-primary)" };
+
+  return (
+    <div
+      className="px-3 py-2.5"
+      style={{ background: renk.bg, border: `1px solid ${renk.edge}`, borderRadius: "var(--r-xs)" }}
+    >
+      <div className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--tx-secondary)" }}>
+        {etiket}
+      </div>
+      <div className="mt-1 text-[15px] font-bold tabular-nums" style={{ color: renk.fg }}>
+        {deger}
+      </div>
+    </div>
   );
 }

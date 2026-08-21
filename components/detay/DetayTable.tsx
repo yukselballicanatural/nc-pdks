@@ -2,6 +2,9 @@
 
 import { useMemo, useState, useTransition } from "react";
 import DataTable, { type Column } from "@/components/ui/DataTable";
+import Modal from "@/components/ui/Modal";
+import Notice from "@/components/ui/Notice";
+import { araTuruToken } from "@/components/ui/AraTuru";
 import { dkp, dks } from "@/lib/format";
 import { REASONS } from "@/lib/engine/constants";
 import { saveCorrectionAction } from "@/app/actions/corrections";
@@ -106,20 +109,7 @@ export default function DetayTable({
                 ? `${r.izinTuru} — ücretli, eksik saate girmez`
                 : `${r.izinTuru} — ücretsiz, eksik saat olarak sayılır`
             }
-            className="whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-medium"
-            style={
-              r.izinUcretli
-                ? {
-                    background: "rgba(6,214,160,0.12)",
-                    border: "1px solid rgba(6,214,160,0.32)",
-                    color: "#06d6a0",
-                  }
-                : {
-                    background: "rgba(251,191,36,0.12)",
-                    border: "1px solid rgba(251,191,36,0.32)",
-                    color: "#fbbf24",
-                  }
-            }
+            className={`pill ${r.izinUcretli ? "pill-ok" : "pill-warn"}`}
           >
             {r.izinTuru}
           </span>
@@ -152,13 +142,8 @@ export default function DetayTable({
             {dkp(r.net)}
             {r.krediDk > 0 && (
               <span
+                className="info-dot"
                 title={`${dkp(r.krediDk)} klinik/toplantı bildirimiyle çalışmaya eklendi — ayrıntı "Düzeltme" sütunundaki bilgi ikonunda`}
-                className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px] font-bold leading-none"
-                style={{
-                  background: "rgba(56,189,248,0.16)",
-                  border: "1px solid rgba(56,189,248,0.45)",
-                  color: "#38bdf8",
-                }}
               >
                 !
               </span>
@@ -220,12 +205,7 @@ export default function DetayTable({
       cell: (r) => (
         <span className="inline-flex items-center gap-1.5">
           {r.duzeltmeNeden ? (
-            <span
-              className="rounded-full px-2 py-0.5 text-xs font-medium"
-              style={{ background: "var(--cl-warn-dim)", color: "var(--cl-warn)" }}
-            >
-              {r.duzeltmeNeden}
-            </span>
+            <span className="pill pill-violet">{r.duzeltmeNeden}</span>
           ) : (
             <span style={{ color: "var(--tx-disabled)" }}>-</span>
           )}
@@ -236,12 +216,7 @@ export default function DetayTable({
               e.stopPropagation();
               setGunBilgiRow(r);
             }}
-            className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px] font-bold leading-none"
-            style={{
-              background: "rgba(56,189,248,0.16)",
-              border: "1px solid rgba(56,189,248,0.45)",
-              color: "#38bdf8",
-            }}
+            className="info-dot"
           >
             !
           </button>
@@ -254,23 +229,17 @@ export default function DetayTable({
   return (
     <>
       {!izinVerisiVar && (
-        <div
-          className="mb-3 rounded-xl p-3 text-xs leading-relaxed"
-          style={{
-            background: "rgba(251,191,36,0.1)",
-            border: "1px solid rgba(251,191,36,0.28)",
-            color: "var(--tx-secondary)",
-          }}
-        >
-          <strong style={{ color: "var(--cl-warn)" }}>İzin verisi yüklenemedi.</strong> Yıllık
-          izin, rapor ve ücretsiz izin bilgisi Kolay İK&apos;dan okunamadığı için &quot;İzin&quot;
-          kolonu boş; izinli kişiler bu tabloda <em>gelmemiş</em> gibi görünür ve eksik saat
-          hesabı da izinleri düşmez. Sebebini İzinler sayfasında görebilirsiniz.
-        </div>
+        <Notice ton="warn" baslik="İzin verisi yüklenemedi" className="mb-3">
+          Yıllık izin, rapor ve ücretsiz izin bilgisi Kolay İK&apos;dan okunamadığı için
+          &quot;İzin&quot; sütunu boş; izinli kişiler bu tabloda <em>gelmemiş</em> gibi görünür ve
+          eksik saat hesabı da izinleri düşmez. Sebebini İzinler sayfasında görebilirsiniz.
+        </Notice>
       )}
-      <p className="mb-3 text-xs" style={{ color: "var(--tx-muted)" }}>
-        💡 {canEdit ? "Satıra tıkla = o günü düzelt" : "Takım Lideri modunda düzeltme yapılamaz"} ·
-        Sütun başlığına tıkla = sırala
+      <p className="mb-3 text-[11px]" style={{ color: "var(--tx-secondary)" }}>
+        {canEdit ? "Satıra tıkla = o günü düzelt" : "Takım Lideri modunda düzeltme yapılamaz"} ·
+        Sütun başlığına tıkla = sırala · Satır sonundaki{" "}
+        <span className="info-dot" style={{ width: 14, height: 14, fontSize: 9 }}>!</span> = o günün
+        saat bazlı dökümü
       </p>
       <DataTable
         rows={filtered}
@@ -303,12 +272,8 @@ export default function DetayTable({
                 {r.adSoyad} · {r.tarih} ({r.gun})
               </span>
               <span
-                className="rounded-full px-3 py-1 text-sm font-semibold"
-                style={
-                  r.izinUcretli
-                    ? { background: "rgba(6,214,160,0.14)", color: "#06d6a0" }
-                    : { background: "rgba(251,191,36,0.14)", color: "#fbbf24" }
-                }
+                className={`pill ${r.izinUcretli ? "pill-ok" : "pill-warn"}`}
+                style={{ fontSize: 13, padding: "3px 12px" }}
               >
                 {r.izinTuru}
               </span>
@@ -319,12 +284,7 @@ export default function DetayTable({
                   e.stopPropagation();
                   setGunBilgiRow(r);
                 }}
-                className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px] font-bold leading-none"
-                style={{
-                  background: "rgba(56,189,248,0.16)",
-                  border: "1px solid rgba(56,189,248,0.45)",
-                  color: "#38bdf8",
-                }}
+                className="info-dot"
               >
                 !
               </button>
@@ -350,14 +310,6 @@ export default function DetayTable({
   );
 }
 
-/** Ara türü rengi — Gün Bilgisi popup'ındaki zaman çizelgesinde tür ayırt edilsin. */
-const TUR_RENK: Record<string, { bg: string; border: string; tx: string }> = {
-  Klinik: { bg: "rgba(56,189,248,0.1)", border: "rgba(56,189,248,0.28)", tx: "#38bdf8" },
-  Toplantı: { bg: "rgba(167,139,250,0.1)", border: "rgba(167,139,250,0.28)", tx: "#a78bfa" },
-  Mola: { bg: "rgba(148,163,184,0.1)", border: "rgba(148,163,184,0.28)", tx: "var(--tx-secondary)" },
-  Yemek: { bg: "rgba(251,191,36,0.1)", border: "rgba(251,191,36,0.28)", tx: "#fbbf24" },
-};
-
 /**
  * Bir günün şeffaflık popup'ı: turnike kaydı varsa saat bazlı zaman
  * çizelgesi (klinik/toplantı/mola/yemek) + klinik/toplantı kredi özeti;
@@ -365,20 +317,18 @@ const TUR_RENK: Record<string, { bg: string; border: string; tx: string }> = {
  */
 function GunBilgiPopup({ row, onClose }: { row: DetayRow; onClose: () => void }) {
   return (
-    <div
-      className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
-      onClick={onClose}
+    <Modal
+      baslik={row.adSoyad}
+      altBaslik={`${row.tarih} · ${row.gun}`}
+      onClose={onClose}
+      genislik={440}
+      footer={
+        <button onClick={onClose} className="btn-ghost px-5" style={{ height: 34 }}>
+          Kapat
+        </button>
+      }
     >
-      <div
-        className="modal-panel glass-modal relative w-full max-w-sm p-5"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="text-sm font-semibold" style={{ color: "var(--tx-primary)" }}>
-          {row.adSoyad} · {row.tarih}
-        </div>
-
-        <div className="mt-3">
+      <div>
           {/*
             Devamsızlık bilgisi ve zaman çizelgesi birbirini DIŞLAMAZ: turnike
             kaydı olmayan bir günde de (hasData=false) kişi klinik/toplantı
@@ -392,19 +342,20 @@ function GunBilgiPopup({ row, onClose }: { row: DetayRow; onClose: () => void })
               </div>
               {row.izinTuru ? (
                 <div
-                  className="rounded-xl px-4 py-3 text-center"
+                  className="px-4 py-3 text-center"
                   style={{
-                    background: row.izinUcretli ? "rgba(6,214,160,0.1)" : "rgba(251,191,36,0.1)",
-                    border: `1px solid ${row.izinUcretli ? "rgba(6,214,160,0.32)" : "rgba(251,191,36,0.32)"}`,
+                    background: row.izinUcretli ? "var(--cl-ok-dim)" : "var(--cl-warn-dim)",
+                    border: `1px solid ${row.izinUcretli ? "var(--cl-ok-edge)" : "var(--cl-warn-edge)"}`,
+                    borderRadius: "var(--r-xs)",
                   }}
                 >
                   <div
-                    className="text-base font-semibold"
-                    style={{ color: row.izinUcretli ? "#06d6a0" : "#fbbf24" }}
+                    className="text-[15px] font-semibold"
+                    style={{ color: row.izinUcretli ? "var(--cl-ok)" : "var(--cl-warn)" }}
                   >
                     {row.izinTuru}
                   </div>
-                  <div className="mt-1 text-[11px]" style={{ color: "var(--tx-secondary)" }}>
+                  <div className="mt-0.5 text-[11px]" style={{ color: "var(--tx-secondary)" }}>
                     {row.izinUcretli
                       ? "Ücretli — eksik saate girmez"
                       : "Ücretsiz — eksik saat olarak sayılır"}
@@ -412,10 +363,11 @@ function GunBilgiPopup({ row, onClose }: { row: DetayRow; onClose: () => void })
                 </div>
               ) : (
                 <div
-                  className="rounded-xl px-4 py-3 text-center text-sm"
+                  className="px-4 py-3 text-center text-xs"
                   style={{
-                    background: "rgba(248,113,113,0.08)",
-                    border: "1px solid rgba(248,113,113,0.25)",
+                    background: "var(--cl-danger-dim)",
+                    border: "1px solid var(--cl-danger-edge)",
+                    borderRadius: "var(--r-xs)",
                     color: "var(--cl-danger)",
                   }}
                 >
@@ -426,16 +378,20 @@ function GunBilgiPopup({ row, onClose }: { row: DetayRow; onClose: () => void })
           )}
 
           {row.gunOlaylari.length > 0 ? (
-            <ul className="mb-3 space-y-1.5 text-sm">
+            <ul className="mb-3 space-y-1.5 text-xs">
               {row.gunOlaylari.map((o, i) => {
-                const renk = TUR_RENK[o.etiket] ?? TUR_RENK.Mola;
+                const renk = araTuruToken(o.etiket);
                 return (
                   <li
                     key={i}
-                    className="flex items-center justify-between gap-2 rounded-lg px-3 py-1.5"
-                    style={{ background: renk.bg, border: `1px solid ${renk.border}` }}
+                    className="flex items-center justify-between gap-2 px-3 py-1.5"
+                    style={{
+                      background: renk.bg,
+                      border: `1px solid ${renk.edge}`,
+                      borderRadius: "var(--r-xs)",
+                    }}
                   >
-                    <span style={{ color: renk.tx }}>
+                    <span style={{ color: renk.fg }}>
                       {o.bas}
                       {o.bit ? `–${o.bit}` : " (açık)"} {o.etiket}
                     </span>
@@ -448,7 +404,7 @@ function GunBilgiPopup({ row, onClose }: { row: DetayRow; onClose: () => void })
                           rel="noopener noreferrer"
                           onClick={(e) => e.stopPropagation()}
                           className="text-[10px] font-medium underline"
-                          style={{ color: renk.tx }}
+                          style={{ color: renk.fg }}
                         >
                           konum
                         </a>
@@ -460,7 +416,7 @@ function GunBilgiPopup({ row, onClose }: { row: DetayRow; onClose: () => void })
             </ul>
           ) : (
             row.hasData && (
-              <div className="mb-3 text-xs" style={{ color: "var(--tx-muted)" }}>
+              <div className="mb-3 text-xs" style={{ color: "var(--tx-secondary)" }}>
                 Bu gün için klinik/toplantı/mola/yemek bildirimi yok.
               </div>
             )
@@ -468,28 +424,20 @@ function GunBilgiPopup({ row, onClose }: { row: DetayRow; onClose: () => void })
 
           {row.krediDk > 0 && (
             <div
-              className="flex items-center justify-between rounded-lg px-3 py-1.5 text-sm font-semibold"
-              style={{ background: "rgba(56,189,248,0.14)", color: "#38bdf8" }}
+              className="flex items-center justify-between px-3 py-2 text-xs font-semibold"
+              style={{
+                background: "var(--ac-sky-dim)",
+                border: "1px solid var(--ac-sky-edge)",
+                borderRadius: "var(--r-xs)",
+                color: "var(--ac-sky)",
+              }}
             >
-              <span>Çalışmaya eklenen (Klinik+Toplantı)</span>
+              <span>Çalışmaya eklenen (Klinik + Toplantı)</span>
               <span className="tabular-nums">{dkp(row.krediDk)}</span>
             </div>
           )}
-        </div>
-
-        <button
-          onClick={onClose}
-          className="mt-4 w-full rounded-xl py-2 text-sm transition-all duration-150"
-          style={{
-            background: "rgba(255,255,255,0.05)",
-            border: "1px solid rgba(255,255,255,0.1)",
-            color: "var(--tx-secondary)",
-          }}
-        >
-          Kapat
-        </button>
       </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -520,123 +468,91 @@ function CorrectionModal({ row, onClose }: { row: DetayRow; onClose: () => void 
   }
 
   return (
-    <div
-      className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
-      onClick={onClose}
-    >
-      <div
-        className="modal-panel glass-modal relative w-full max-w-md p-6"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 h-px rounded-t-[18px]"
-          style={{
-            background:
-              "linear-gradient(90deg, transparent, rgba(251,191,36,0.5) 50%, transparent)",
-          }}
-        />
-
-        <div className="text-lg font-semibold" style={{ color: "var(--tx-primary)" }}>
-          Gün Düzelt
-        </div>
-        <div className="mb-5 text-sm" style={{ color: "var(--tx-secondary)" }}>
-          {row.adSoyad} · {row.tarih} ({row.gun})
-        </div>
-
-        <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider" style={{ color: "var(--tx-secondary)" }}>
-          Neden
-        </label>
-        <select
-          value={neden}
-          onChange={(e) => setNeden(e.target.value)}
-          className="input-glass mb-4 w-full px-3 py-2 text-sm"
-        >
-          {REASONS.map((r) => (
-            <option key={r} value={r}>
-              {r}
-            </option>
-          ))}
-        </select>
-
-        <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider" style={{ color: "var(--tx-secondary)" }}>
-          Sayılacak Çalışma Süresi (mevcut: {dkp(row.net)})
-        </label>
-        <div className="mb-4 flex items-center gap-2">
-          <input
-            type="number"
-            min={0}
-            max={24}
-            value={saat}
-            onChange={(e) => setSaat(Number(e.target.value))}
-            className="input-glass w-20 px-3 py-2 text-sm"
-          />
-          <span className="text-sm" style={{ color: "var(--tx-muted)" }}>
-            saat
-          </span>
-          <input
-            type="number"
-            min={0}
-            max={59}
-            value={dakika}
-            onChange={(e) => setDakika(Number(e.target.value))}
-            className="input-glass w-20 px-3 py-2 text-sm"
-          />
-          <span className="text-sm" style={{ color: "var(--tx-muted)" }}>
-            dakika
-          </span>
-        </div>
-
-        <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider" style={{ color: "var(--tx-secondary)" }}>
-          Açıklama (opsiyonel)
-        </label>
-        <input
-          type="text"
-          value={acik}
-          onChange={(e) => setAcik(e.target.value)}
-          className="input-glass mb-5 w-full px-3 py-2 text-sm"
-        />
-
-        {error && (
-          <div
-            className="mb-4 rounded-xl px-3 py-2 text-sm"
-            style={{
-              background: "var(--cl-danger-dim)",
-              border: "1px solid rgba(248,113,113,0.25)",
-              color: "var(--cl-danger)",
-            }}
-          >
-            {error}
-          </div>
-        )}
-
-        <div className="flex gap-2">
+    <Modal
+      baslik="Gün Düzelt"
+      altBaslik={`${row.adSoyad} · ${row.tarih} (${row.gun})`}
+      onClose={onClose}
+      genislik={440}
+      footer={
+        <>
+          <button onClick={onClose} className="btn-ghost px-5" style={{ height: 34 }}>
+            İptal
+          </button>
           <button
             onClick={submit}
             disabled={pending}
-            className="flex-1 rounded-xl py-2 text-sm font-semibold tracking-wide transition-all duration-150 disabled:opacity-50"
-            style={{
-              background: "linear-gradient(135deg, #38bdf8, #06d6a0)",
-              color: "#06091a",
-              boxShadow: "0 4px 16px rgba(56,189,248,0.25)",
-            }}
+            className="btn-base btn-primary px-5"
+            style={{ height: 34 }}
           >
             {pending ? "Kaydediliyor…" : "Kaydet"}
           </button>
-          <button
-            onClick={onClose}
-            className="flex-1 rounded-xl py-2 text-sm transition-all duration-150"
-            style={{
-              background: "rgba(255,255,255,0.05)",
-              border: "1px solid rgba(255,255,255,0.1)",
-              color: "var(--tx-secondary)",
-            }}
-          >
-            İptal
-          </button>
-        </div>
+        </>
+      }
+    >
+      <label className="form-label" htmlFor="cor-neden">
+        Neden
+      </label>
+      <select
+        id="cor-neden"
+        value={neden}
+        onChange={(e) => setNeden(e.target.value)}
+        className="input-glass mb-4 w-full px-3 text-xs"
+        style={{ height: 34 }}
+      >
+        {REASONS.map((r) => (
+          <option key={r} value={r}>
+            {r}
+          </option>
+        ))}
+      </select>
+
+      <label className="form-label">Sayılacak Çalışma Süresi (mevcut: {dkp(row.net)})</label>
+      <div className="mb-4 flex items-center gap-2">
+        <input
+          type="number"
+          min={0}
+          max={24}
+          value={saat}
+          onChange={(e) => setSaat(Number(e.target.value))}
+          aria-label="Saat"
+          className="input-glass w-20 px-3 text-xs tabular-nums"
+          style={{ height: 34 }}
+        />
+        <span className="text-xs" style={{ color: "var(--tx-secondary)" }}>
+          saat
+        </span>
+        <input
+          type="number"
+          min={0}
+          max={59}
+          value={dakika}
+          onChange={(e) => setDakika(Number(e.target.value))}
+          aria-label="Dakika"
+          className="input-glass w-20 px-3 text-xs tabular-nums"
+          style={{ height: 34 }}
+        />
+        <span className="text-xs" style={{ color: "var(--tx-secondary)" }}>
+          dakika
+        </span>
       </div>
-    </div>
+
+      <label className="form-label" htmlFor="cor-acik">
+        Açıklama (opsiyonel)
+      </label>
+      <input
+        id="cor-acik"
+        type="text"
+        value={acik}
+        onChange={(e) => setAcik(e.target.value)}
+        className="input-glass w-full px-3 text-xs"
+        style={{ height: 34 }}
+      />
+
+      {error && (
+        <Notice ton="danger" className="mt-4">
+          {error}
+        </Notice>
+      )}
+    </Modal>
   );
 }

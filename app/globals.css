@@ -403,6 +403,19 @@ select.input-glass option {
   color: var(--tx-primary);
 }
 
+/* Form alanı etiketi — modal/panel içindeki input başlıkları.
+   §2.4: --tx-muted DEĞİL --tx-secondary; küçük punto + en soluk ton camda
+   pratikte okunmuyor. */
+.form-label {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--tx-secondary);
+}
+
 /* ═════════════════════════════ BUTONLAR (§6) ═════════════════════════════
    KURAL: birincil ve ikincil buton AYNI geometriye sahip (padding, radius,
    font) — yan yana dururken yükseklikleri eşit olsun, hiyerarşi yalnızca
@@ -552,6 +565,28 @@ select.input-glass option {
 .pill-sky    { background: var(--ac-sky-dim);    border-color: var(--ac-sky-edge);    color: var(--ac-sky); }
 .pill-cyan   { background: var(--ac-cyan-dim);   border-color: var(--ac-cyan-edge);   color: var(--ac-cyan); }
 .pill-mute   { background: var(--sf-2);          border-color: var(--edge-soft);      color: var(--tx-secondary); }
+
+/* Bilgi noktası — hücre içinde "ayrıntı var" işareti (küçük yuvarlak ünlem).
+   Hem tıklanabilir (button) hem salt bilgi (span) olarak kullanılır. */
+.info-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex: none;
+  border-radius: var(--r-pill);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  background: var(--ac-sky-dim);
+  border: 1px solid var(--ac-sky-edge);
+  color: var(--ac-sky);
+  transition: background 0.18s var(--ease), transform 0.26s var(--spring);
+}
+button.info-dot { cursor: pointer; }
+button.info-dot:hover { background: var(--ac-sky-glow); transform: scale(1.15); }
+button.info-dot:active { transform: scale(0.9); }
 
 /* ═══════════════════════ KPI KARTI (§10) ════════════════════════════════
    Her karta style="--kpi:#38bdf8" verilir; üst kenar, köşe ışıması ve ikon
