@@ -582,6 +582,38 @@ select.input-glass option {
 .pill-cyan   { background: var(--ac-cyan-dim);   border-color: var(--ac-cyan-edge);   color: var(--ac-cyan); }
 .pill-mute   { background: var(--sf-2);          border-color: var(--edge-soft);      color: var(--tx-secondary); }
 
+/* ═══════════════════ İPUCU BALONU (tooltip / popover) ═══════════════════
+   Tablo hücresindeki bir işaretin yanında açılan küçük açıklama balonu.
+   Modal DEĞİL: sayfayı karartmaz, odak çalmaz — tarama akışını bozmadan
+   "bu satırda ne var" sorusuna cevap verir.
+
+   Takvim ve modaldaki aynı ders: panel portal ile <body>'ye taşınıp
+   position:fixed olur, böylece backdrop-filter taşıyan ataların yığın
+   bağlamına hapsolmaz.
+   ═══════════════════════════════════════════════════════════════════════ */
+.tip-panel {
+  position: fixed;
+  max-width: 340px;
+  padding: 11px 14px;
+  border-radius: var(--r-sm);
+  background: var(--sf-strong);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid var(--edge);
+  box-shadow: var(--sh-2), var(--sheen);
+  color: var(--tx-primary);
+  font-size: 12px;
+  line-height: 1.55;
+  animation: tipIn 0.16s var(--ease) both;
+}
+@keyframes tipIn {
+  from { opacity: 0; transform: translateY(4px) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tip-panel { animation: none; }
+}
+
 /* Bilgi noktası — hücre içinde "ayrıntı var" işareti (küçük yuvarlak ünlem).
    Hem tıklanabilir (button) hem salt bilgi (span) olarak kullanılır. */
 .info-dot {

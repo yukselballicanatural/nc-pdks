@@ -80,6 +80,7 @@ export default async function GunlukDetayPage({
         netFark: net > 0 ? (oran > 0 ? net - std * oran : net) : 0,
         kayit: sh ? sh.cnt : null,
         duzeltmeNeden: cor ? String(cor.neden ?? "Düzeltme") : null,
+        duzeltmeAcik: cor && cor.acik ? String(cor.acik) : null,
         izinTuru: izin?.tur ?? null,
         izinUcretli: izin?.ucretli ?? null,
         krediDetay,

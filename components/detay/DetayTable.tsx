@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import DataTable, { type Column } from "@/components/ui/DataTable";
 import Modal from "@/components/ui/Modal";
+import InfoTip from "@/components/ui/InfoTip";
 import Notice from "@/components/ui/Notice";
 import { araTuruToken } from "@/components/ui/AraTuru";
 import { dkp, dks } from "@/lib/format";
@@ -25,6 +26,8 @@ export interface DetayRow {
   netFark: number;
   kayit: number | null;
   duzeltmeNeden: string | null;
+  /** Düzeltmeye yazılan serbest açıklama — ipucu balonunda gösterilir. */
+  duzeltmeAcik: string | null;
   /** Kolay İK'dan gelen izin türü ("Yıllık İzin", "Hastalık İzni (Raporlu)"...). */
   izinTuru: string | null;
   /** Ücretli izin eksik saate girmez; ücretsiz girer (bkz. lib/engine/summary.ts). */
@@ -63,7 +66,6 @@ export default function DetayTable({
   const [tl, setTl] = useState("");
   const [tip, setTip] = useState("");
   const [edit, setEdit] = useState<DetayRow | null>(null);
-  const [gunBilgiRow, setGunBilgiRow] = useState<DetayRow | null>(null);
 
   const tlList = useMemo(
     () => [...new Set(rows.map((r) => r.unvan).filter(Boolean))].sort((a, b) => a.localeCompare(b, "tr")),
@@ -209,17 +211,13 @@ export default function DetayTable({
           ) : (
             <span style={{ color: "var(--tx-disabled)" }}>-</span>
           )}
-          <button
-            type="button"
-            title="Gün bilgisi: saat bazlı zaman çizelgesi ve/veya devamsızlık sebebi"
-            onClick={(e) => {
-              e.stopPropagation();
-              setGunBilgiRow(r);
-            }}
-            className="info-dot"
-          >
-            !
-          </button>
+          {/* Ünlem yalnızca SÖYLENECEK BİR ŞEY VARSA çizilir — eskiden her
+              satırda duruyordu ve çoğunda tıklayınca boş bir pencere açıyordu. */}
+          {bilgiVar(r) && (
+            <InfoTip etiket="Gün bilgisi">
+              <GunBilgisi row={r} />
+            </InfoTip>
+          )}
         </span>
       ),
       sortValue: (r) => r.duzeltmeNeden ?? "",
@@ -238,8 +236,8 @@ export default function DetayTable({
       <p className="mb-3 text-[11px]" style={{ color: "var(--tx-secondary)" }}>
         {canEdit ? "Satıra tıkla = o günü düzelt" : "Takım Lideri modunda düzeltme yapılamaz"} ·
         Sütun başlığına tıkla = sırala · Satır sonundaki{" "}
-        <span className="info-dot" style={{ width: 14, height: 14, fontSize: 9 }}>!</span> = o günün
-        saat bazlı dökümü
+        <span className="info-dot" style={{ width: 14, height: 14, fontSize: 9 }}>!</span>{" "}
+        üzerine gel = o günün dökümü (düzeltme açıklaması, saat bazlı hareketler, izin sebebi)
       </p>
       <DataTable
         rows={filtered}
@@ -277,17 +275,9 @@ export default function DetayTable({
               >
                 {r.izinTuru}
               </span>
-              <button
-                type="button"
-                title="Gün bilgisi"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setGunBilgiRow(r);
-                }}
-                className="info-dot"
-              >
-                !
-              </button>
+              <InfoTip etiket="Gün bilgisi">
+                <GunBilgisi row={r} />
+              </InfoTip>
             </div>
           ) : null
         }
@@ -305,139 +295,150 @@ export default function DetayTable({
         pageSize={200}
       />
       {edit && <CorrectionModal row={edit} onClose={() => setEdit(null)} />}
-      {gunBilgiRow && <GunBilgiPopup row={gunBilgiRow} onClose={() => setGunBilgiRow(null)} />}
     </>
   );
 }
 
 /**
- * Bir günün şeffaflık popup'ı: turnike kaydı varsa saat bazlı zaman
- * çizelgesi (klinik/toplantı/mola/yemek) + klinik/toplantı kredi özeti;
- * turnike kaydı yoksa "neden gelmedi" (izinli mi, hangi tür) bilgisi.
+ * Bir satırda gösterilecek bir şey var mı?
+ *
+ * Ünlem eskiden HER satırda duruyordu; çoğunda tıklandığında söyleyecek bir
+ * şey olmadığı için boş bir pencere açıyordu. Artık yalnızca gerçekten bir
+ * açıklama varsa çiziliyor.
  */
-function GunBilgiPopup({ row, onClose }: { row: DetayRow; onClose: () => void }) {
+function bilgiVar(r: DetayRow): boolean {
   return (
-    <Modal
-      baslik={row.adSoyad}
-      altBaslik={`${row.tarih} · ${row.gun}`}
-      onClose={onClose}
-      genislik={440}
-      footer={
-        <button onClick={onClose} className="btn-ghost px-5" style={{ height: 34 }}>
-          Kapat
-        </button>
-      }
-    >
-      <div>
-          {/*
-            Devamsızlık bilgisi ve zaman çizelgesi birbirini DIŞLAMAZ: turnike
-            kaydı olmayan bir günde de (hasData=false) kişi klinik/toplantı
-            bildirimi yapmış olabilir (bkz. canlı veri doğrulaması, 2026-08-19/17)
-            — biri diğerini gizlerse o bildirimler görünmez olurdu.
-          */}
-          {!row.hasData && (
-            <div className="mb-3">
-              <div className="mb-2 text-xs" style={{ color: "var(--tx-secondary)" }}>
-                Bu gün turnike kaydı yok.
-              </div>
-              {row.izinTuru ? (
-                <div
-                  className="px-4 py-3 text-center"
-                  style={{
-                    background: row.izinUcretli ? "var(--cl-ok-dim)" : "var(--cl-warn-dim)",
-                    border: `1px solid ${row.izinUcretli ? "var(--cl-ok-edge)" : "var(--cl-warn-edge)"}`,
-                    borderRadius: "var(--r-xs)",
-                  }}
-                >
-                  <div
-                    className="text-[15px] font-semibold"
-                    style={{ color: row.izinUcretli ? "var(--cl-ok)" : "var(--cl-warn)" }}
-                  >
-                    {row.izinTuru}
-                  </div>
-                  <div className="mt-0.5 text-[11px]" style={{ color: "var(--tx-secondary)" }}>
-                    {row.izinUcretli
-                      ? "Ücretli — eksik saate girmez"
-                      : "Ücretsiz — eksik saat olarak sayılır"}
-                  </div>
-                </div>
-              ) : (
-                <div
-                  className="px-4 py-3 text-center text-xs"
-                  style={{
-                    background: "var(--cl-danger-dim)",
-                    border: "1px solid var(--cl-danger-edge)",
-                    borderRadius: "var(--r-xs)",
-                    color: "var(--cl-danger)",
-                  }}
-                >
-                  Sebep bilinmiyor — kayıtsız gün
-                </div>
-              )}
-            </div>
-          )}
+    r.duzeltmeNeden !== null || // elle düzeltme (ve varsa açıklaması)
+    r.gunOlaylari.length > 0 || // klinik/toplantı/mola/yemek bildirimi
+    r.izinTuru !== null || // izin sebebi
+    (!r.hasData && !r.hafta) // hafta içi gelmemiş — sebebi söylenmeli
+  );
+}
 
-          {row.gunOlaylari.length > 0 ? (
-            <ul className="mb-3 space-y-1.5 text-xs">
-              {row.gunOlaylari.map((o, i) => {
-                const renk = araTuruToken(o.etiket);
-                return (
-                  <li
-                    key={i}
-                    className="flex items-center justify-between gap-2 px-3 py-1.5"
-                    style={{
-                      background: renk.bg,
-                      border: `1px solid ${renk.edge}`,
-                      borderRadius: "var(--r-xs)",
-                    }}
-                  >
-                    <span style={{ color: renk.fg }}>
-                      {o.bas}
-                      {o.bit ? `–${o.bit}` : " (açık)"} {o.etiket}
-                    </span>
-                    <span className="flex items-center gap-2 tabular-nums" style={{ color: "var(--tx-primary)" }}>
-                      {o.dk != null ? dkp(o.dk) : "—"}
-                      {o.konum && (
-                        <a
-                          href={o.konum}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="text-[10px] font-medium underline"
-                          style={{ color: renk.fg }}
-                        >
-                          konum
-                        </a>
-                      )}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : (
-            row.hasData && (
-              <div className="mb-3 text-xs" style={{ color: "var(--tx-secondary)" }}>
-                Bu gün için klinik/toplantı/mola/yemek bildirimi yok.
-              </div>
-            )
-          )}
-
-          {row.krediDk > 0 && (
-            <div
-              className="flex items-center justify-between px-3 py-2 text-xs font-semibold"
-              style={{
-                background: "var(--ac-sky-dim)",
-                border: "1px solid var(--ac-sky-edge)",
-                borderRadius: "var(--r-xs)",
-                color: "var(--ac-sky)",
-              }}
-            >
-              <span>Çalışmaya eklenen (Klinik + Toplantı)</span>
-              <span className="tabular-nums">{dkp(row.krediDk)}</span>
-            </div>
-          )}
+/**
+ * Gün dökümü — ipucu balonunun içeriği.
+ *
+ * Eskiden bu bir MODAL'dı: sayfayı karartıp odak çalıyordu, oysa tablo
+ * taranırken sorulan soru ("bu satırda ne var?") o kadar ağır bir hamleyi
+ * hak etmiyor. Artık ünlemin yanında açılan küçük bir balon.
+ *
+ * İçerik sırası bilinçli — en çok aranan bilgi en üstte:
+ *   1. Düzeltme açıklaması (yönetici neden elle değiştirdi?)
+ *   2. Devamsızlık sebebi (izinli mi?)
+ *   3. Saat bazlı hareketler (nerede geçirdi?)
+ *   4. Çalışmaya eklenen süre
+ */
+function GunBilgisi({ row }: { row: DetayRow }) {
+  return (
+    <div className="space-y-2.5">
+      <div className="text-[11px] font-semibold" style={{ color: "var(--tx-secondary)" }}>
+        {row.tarih} · {row.gun}
       </div>
-    </Modal>
+
+      {/* 1) Elle düzeltme — açıklaması varsa asıl aradığımız metin bu */}
+      {row.duzeltmeNeden && (
+        <div>
+          <span className="pill pill-violet">{row.duzeltmeNeden}</span>
+          {row.duzeltmeAcik ? (
+            <p className="mt-1.5" style={{ color: "var(--tx-primary)" }}>
+              {row.duzeltmeAcik}
+            </p>
+          ) : (
+            <p className="mt-1.5 text-[11px]" style={{ color: "var(--tx-secondary)" }}>
+              Açıklama yazılmamış.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/*
+        2) Devamsızlık sebebi. Zaman çizelgesiyle birbirini DIŞLAMAZ: turnike
+        kaydı olmayan bir günde de kişi klinik/toplantı bildirimi yapmış
+        olabilir (canlı veride görüldü, 2026-08-17/19) — biri diğerini
+        gizlerse o bildirimler görünmez olurdu.
+      */}
+      {!row.hasData && (
+        <div>
+          <div className="mb-1 text-[11px]" style={{ color: "var(--tx-secondary)" }}>
+            Bu gün turnike kaydı yok.
+          </div>
+          {row.izinTuru ? (
+            <div className="flex items-baseline gap-2">
+              <span className={`pill ${row.izinUcretli ? "pill-ok" : "pill-warn"}`}>
+                {row.izinTuru}
+              </span>
+              <span className="text-[11px]" style={{ color: "var(--tx-secondary)" }}>
+                {row.izinUcretli ? "eksik saate girmez" : "eksik saat sayılır"}
+              </span>
+            </div>
+          ) : (
+            <span className="pill pill-danger">Sebep bilinmiyor — kayıtsız gün</span>
+          )}
+        </div>
+      )}
+
+      {/* 3) Saat bazlı hareketler */}
+      {row.gunOlaylari.length > 0 && (
+        <ul className="space-y-1">
+          {row.gunOlaylari.map((o, i) => {
+            const renk = araTuruToken(o.etiket);
+            return (
+              <li
+                key={i}
+                className="flex items-center justify-between gap-2.5 px-2.5 py-1"
+                style={{
+                  background: renk.bg,
+                  border: `1px solid ${renk.edge}`,
+                  borderRadius: "var(--r-input)",
+                  fontSize: 11.5,
+                }}
+              >
+                <span style={{ color: renk.fg }}>
+                  <span className="tabular-nums">
+                    {o.bas}
+                    {o.bit ? `–${o.bit}` : " (açık)"}
+                  </span>{" "}
+                  {o.etiket}
+                </span>
+                <span
+                  className="flex shrink-0 items-center gap-2 tabular-nums"
+                  style={{ color: "var(--tx-primary)" }}
+                >
+                  {o.dk != null ? dkp(o.dk) : "—"}
+                  {o.konum && (
+                    <a
+                      href={o.konum}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px] font-medium underline"
+                      style={{ color: renk.fg }}
+                    >
+                      konum
+                    </a>
+                  )}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      {/* 4) Çalışmaya eklenen süre */}
+      {row.krediDk > 0 && (
+        <div
+          className="flex items-center justify-between gap-3 px-2.5 py-1.5 text-[11.5px] font-semibold"
+          style={{
+            background: "var(--ac-sky-dim)",
+            border: "1px solid var(--ac-sky-edge)",
+            borderRadius: "var(--r-input)",
+            color: "var(--ac-sky)",
+          }}
+        >
+          <span>Çalışmaya eklendi (Klinik + Toplantı)</span>
+          <span className="tabular-nums">{dkp(row.krediDk)}</span>
+        </div>
+      )}
+    </div>
   );
 }
 
