@@ -967,14 +967,55 @@ html[data-sidebar="mini"] .sb-pad { padding-left: 10px; padding-right: 10px; }
 html[data-sidebar="mini"] .sb-row { justify-content: center; gap: 0; }
 html[data-sidebar="mini"] .sb-nav-item { padding-left: 0; padding-right: 0; }
 
-/* Nav öğesi */
+/* ── Marka logosu ──
+   İki dosya da DOM'da; hangisinin göründüğünü CSS belirliyor (§5.4 deseni).
+   JS ile kaynak değiştirmek tema geçişinde bir kare boyunca yanlış logoyu
+   gösterirdi. Beyaz sürüm koyu temada, koyu sürüm açık temada. */
+.sb-logo-light { display: block; }
+.sb-logo-dark { display: none; }
+html[data-theme="light"] .sb-logo-light { display: none; }
+html[data-theme="light"] .sb-logo-dark { display: block; }
+
+/* Alt başlık — referans tasarımdaki italik, soluk açıklama satırı */
+.sb-subtitle {
+  font-size: 10.5px;
+  font-style: italic;
+  line-height: 1.35;
+  color: var(--tx-secondary);
+}
+
+/* Bölüm etiketi (NAVİGASYON / GÖRÜNÜM) */
+.sb-section {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.11em;
+  color: var(--tx-muted);
+}
+
+/* ── Nav öğesi ──
+   AKTİF DURUM: referans tasarımda aktif satır KOYU dolgulu, beyaz metinli bir
+   kapsül. Bu, açık temada doğru; koyu temada koyu dolgu görünmez olurdu, o
+   yüzden dolgu/metin çifti tema başına token: koyuda ışık camı, açıkta koyu
+   cam (DESIGN_SYSTEM.md §5.6 ile aynı mantık). */
+:root {
+  --nav-on-bg: rgba(255, 255, 255, 0.16);
+  --nav-on-fg: var(--tx-primary);
+  --nav-on-icon: var(--ac-sky);
+}
+html[data-theme="light"] {
+  --nav-on-bg: rgba(18, 22, 34, 0.80);
+  --nav-on-fg: #ffffff;
+  --nav-on-icon: #7dd3fc;
+}
+
 .sb-nav-item {
   position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 8px 11px;
-  border-radius: var(--r-btn);
+  border-radius: var(--r-xs);
   font-size: 12.5px;
   font-weight: 500;
   color: var(--tx-secondary);
@@ -987,26 +1028,80 @@ html[data-sidebar="mini"] .sb-nav-item { padding-left: 0; padding-right: 0; }
   color: var(--tx-primary);
 }
 .sb-nav-item:active { transform: scale(0.97); }
+
 .sb-on {
-  background: var(--ac-sky-dim);
-  border-color: var(--ac-sky-edge);
-  color: var(--ac-sky);
+  background: var(--nav-on-bg);
+  color: var(--nav-on-fg);
   font-weight: 600;
-  box-shadow: var(--sheen);
+  box-shadow: var(--sh-1);
 }
-/* Aktif göstergesi — sol kenarda ince ışık çubuğu */
-.sb-on::before {
-  content: "";
-  position: absolute;
-  left: -1px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
+.sb-on .sb-icon { color: var(--nav-on-icon); }
+
+.sb-icon {
+  display: flex;
+  flex: none;
+  color: var(--tx-muted);
+  transition: color 0.22s var(--ease);
+}
+.sb-nav-item:hover .sb-icon { color: var(--tx-secondary); }
+
+/* Nav sayaç rozeti — referanstaki kırmızı/nötr yuvarlak sayı */
+.sb-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
   height: 18px;
-  border-radius: 0 var(--r-pill) var(--r-pill) 0;
-  background: var(--ac-sky);
-  box-shadow: 0 0 8px var(--ac-sky-glow);
+  padding: 0 6px;
+  border-radius: var(--r-pill);
+  font-size: 9.5px;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
+
+/* ── Görünüm (tema) anahtarı — referanstaki güneş/ay kaydırmalı pill ── */
+.sb-theme-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 56px;
+  height: 26px;
+  flex: none;
+  padding: 3px;
+  border-radius: var(--r-pill);
+  background: var(--sf-2);
+  border: 1px solid var(--edge-soft);
+  box-shadow: var(--sheen);
+  cursor: pointer;
+  transition: background 0.22s var(--ease), border-color 0.22s var(--ease);
+}
+.sb-theme-switch:hover { background: var(--sf-hover); }
+/* Kayan topuz — tek katman, iki uç arasında yay ile akar (§5.6 prensibi) */
+.sb-theme-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--r-pill);
+  background: var(--ac-grad);
+  box-shadow: var(--sh-1);
+  transition: transform 0.34s var(--spring);
+}
+html[data-theme="dark"] .sb-theme-knob { transform: translateX(26px); }
+.sb-theme-ico {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: 24px;
+  justify-content: center;
+  color: var(--tx-muted);
+  transition: color 0.22s var(--ease);
+}
+/* Aktif taraftaki ikon topuzun üstünde kalır — kontrast için koyu */
+html[data-theme="light"] .sb-theme-ico-sun { color: var(--ac-on); }
+html[data-theme="dark"] .sb-theme-ico-moon { color: var(--ac-on); }
 
 /* ═══════════════════════ Z-KATMAN SÖZLÜĞÜ ═══════════════════════════════
    Takvim/popover'ın tablonun ARKASINDA kalması bu projede gerçek bir

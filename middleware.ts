@@ -40,5 +40,15 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  /**
+   * Statik dosyalar oturum kontrolünün DIŞINDA kalmalı.
+   *
+   * Uzantı listesi bilinçli: public/ altındaki logo eklendiğinde Next'in
+   * görüntü iyileştiricisi kaynağı kendi içinden HTTP ile çekiyor, middleware
+   * o isteği de /login'e yönlendiriyordu ve iyileştirici 400 dönüyordu —
+   * yani logo hiç görünmüyordu. Bu dosyalar zaten gizli bilgi taşımıyor.
+   */
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|svg|webp|avif|ico|woff|woff2|ttf)$).*)",
+  ],
 };

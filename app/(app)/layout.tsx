@@ -49,7 +49,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           />
         }
       >
-        <Sidebar role={session.role} username={session.username} />
+        <Sidebar role={session.role} username={session.username} tlName={session.tlName} />
       </Suspense>
       <main className="min-w-0 flex-1">{children}</main>
       <LiveSync baslangicSurumu={surum} />

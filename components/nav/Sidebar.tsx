@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link, { useLinkStatus } from "next/link";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -276,9 +277,12 @@ function DaraltDugmesi() {
 export default function Sidebar({
   role,
   username,
+  tlName,
 }: {
   role: "admin" | "tl";
   username: string;
+  /** TL modunda bağlı olduğu ünvan/takım — kullanıcı kartında gösterilir. */
+  tlName?: string | null;
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -317,38 +321,53 @@ export default function Sidebar({
         borderBottom: 0,
       }}
     >
-      {/* ── Logo + daralt oku ── */}
-      <div
-        className="sb-pad flex items-center gap-2.5 px-4 py-3.5"
-        style={{ borderBottom: "1px solid var(--edge-soft)" }}
-      >
-        <div
-          className="flex h-8 w-8 shrink-0 items-center justify-center"
-          style={{
-            borderRadius: "var(--r-btn)",
-            background: "var(--ac-sky-dim)",
-            border: "1px solid var(--ac-sky-edge)",
-            boxShadow: "var(--sheen)",
-          }}
-        >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <path d="M12 2L3 7v10l9 5 9-5V7L12 2z" stroke="var(--ac-sky)" strokeWidth="1.7" strokeLinejoin="round" />
-            <path d="M12 7v10M7 9.5l5 2.5 5-2.5" stroke="var(--ac-cyan)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+      {/* ── Marka ── */}
+      <div className="sb-pad px-4 pb-3.5 pt-4" style={{ borderBottom: "1px solid var(--edge-soft)" }}>
+        <div className="sb-row flex items-start gap-2.5">
+          {/* Full: gerçek logo. Mini: 64px'e sığmayacağı için kompakt işaret. */}
+          <div className="sb-full-only min-w-0 flex-1">
+            <Image
+              src="/natural-logo-light.png"
+              alt="natural.clinic"
+              width={761}
+              height={326}
+              priority
+              className="sb-logo-light h-auto w-[124px]"
+            />
+            <Image
+              src="/natural-logo-dark.png"
+              alt="natural.clinic"
+              width={761}
+              height={326}
+              priority
+              className="sb-logo-dark h-auto w-[124px]"
+            />
+          </div>
+
+          <div className="sb-mini-only justify-center">
+            <span
+              className="flex h-8 w-8 items-center justify-center text-[15px] font-semibold"
+              title="natural.clinic"
+              style={{
+                borderRadius: "var(--r-btn)",
+                background: "var(--ac-sky-dim)",
+                border: "1px solid var(--ac-sky-edge)",
+                color: "var(--ac-sky)",
+                fontFamily: "var(--font-display)",
+              }}
+            >
+              n
+            </span>
+          </div>
+
+          <span className="sb-full-only">
+            <DaraltDugmesi />
+          </span>
         </div>
 
-        <div className="sb-full-only min-w-0 flex-1">
-          <div className="truncate text-[13px] font-semibold leading-tight" style={{ color: "var(--tx-primary)" }}>
-            PDKS Pro
-          </div>
-          <div className="truncate text-[10px] leading-tight" style={{ color: "var(--tx-secondary)" }}>
-            Natural Clinic
-          </div>
-        </div>
-
-        <span className="sb-full-only">
-          <DaraltDugmesi />
-        </span>
+        <p className="sb-subtitle sb-full-only mt-2">
+          Natural Clinic Personel Devam Kontrol Sistemi
+        </p>
       </div>
 
       {/* Mini modda daralt oku kendi satırında ortalanır */}
@@ -359,16 +378,47 @@ export default function Sidebar({
         <DaraltDugmesi />
       </div>
 
+      {/* ── Kullanıcı kartı ── */}
+      <div className="sb-pad px-4 py-3" style={{ borderBottom: "1px solid var(--edge-soft)" }}>
+        <div className="sb-row flex items-center gap-2.5">
+          <div
+            className="flex h-9 w-9 shrink-0 items-center justify-center text-[13px] font-bold"
+            style={{
+              borderRadius: "var(--r-pill)",
+              background: "var(--ac-grad)",
+              color: "var(--ac-on)",
+              boxShadow: "var(--sh-1)",
+            }}
+          >
+            {username.charAt(0).toLocaleUpperCase("tr-TR")}
+          </div>
+          <div className="sb-full-only min-w-0">
+            <div
+              className="truncate text-[12.5px] font-semibold leading-tight"
+              style={{ color: "var(--tx-primary)" }}
+            >
+              {username}
+            </div>
+            {tlName && (
+              <div className="truncate text-[10.5px] leading-tight" style={{ color: "var(--tx-secondary)" }}>
+                {tlName}
+              </div>
+            )}
+            <div
+              className="mt-0.5 text-[9.5px] font-bold uppercase tracking-[0.09em]"
+              style={{ color: "var(--ac-cyan)" }}
+            >
+              {role === "admin" ? "Yönetici" : "Takım Lideri"}
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* ── Navigasyon ── */}
       <nav className="sb-pad flex-1 overflow-y-auto overflow-x-hidden px-2.5 py-3" aria-label="Ana menü">
         {gruplar.map((grup, gi) => (
           <div key={grup.baslik} className={gi > 0 ? "mt-4" : undefined}>
-            <div
-              className="sb-full-only px-2 pb-1.5 text-[9.5px] font-bold uppercase tracking-[0.1em]"
-              style={{ color: "var(--tx-muted)" }}
-            >
-              {grup.baslik}
-            </div>
+            <div className="sb-section sb-full-only px-2 pb-1.5">{grup.baslik}</div>
             {/* Mini modda başlık yerine ince ayraç — gruplar yine ayrışsın */}
             {gi > 0 && (
               <div
@@ -389,7 +439,7 @@ export default function Sidebar({
                     aria-current={active ? "page" : undefined}
                     className={`sb-nav-item sb-row ${active ? "sb-on" : ""}`}
                   >
-                    <span className="shrink-0">
+                    <span className="sb-icon">
                       <NavIcon name={item.icon} />
                     </span>
                     <span className="sb-full-only truncate">{item.label}</span>
@@ -402,37 +452,15 @@ export default function Sidebar({
         ))}
       </nav>
 
-      {/* ── Alt blok: kullanıcı · tema · çıkış ── */}
+      {/* ── Alt blok: görünüm · çıkış ── */}
       <div className="sb-pad px-3 py-3" style={{ borderTop: "1px solid var(--edge-soft)" }}>
-        <div className="sb-row mb-2.5 flex items-center gap-2.5">
-          <div
-            className="flex h-8 w-8 shrink-0 items-center justify-center text-xs font-bold"
-            style={{
-              borderRadius: "var(--r-pill)",
-              background: "var(--ac-sky-dim)",
-              color: "var(--ac-sky)",
-              border: "1px solid var(--ac-sky-edge)",
-            }}
-          >
-            {username.charAt(0).toLocaleUpperCase("tr-TR")}
-          </div>
-          <div className="sb-full-only min-w-0">
-            <div className="truncate text-xs font-semibold" style={{ color: "var(--tx-primary)" }}>
-              {username}
-            </div>
-            <div className="truncate text-[10px]" style={{ color: "var(--tx-secondary)" }}>
-              {role === "admin" ? "Yönetici" : "Takım Lideri"}
-            </div>
-          </div>
-        </div>
-
-        {/* Full: tam genişlik düğmeler alt alta */}
-        <div className="sb-full-only flex flex-col gap-1.5">
+        {/* Full: etiketli satırlar */}
+        <div className="sb-full-only flex flex-col gap-2">
           <ThemeToggle />
           <button
             onClick={logout}
             disabled={cikisYapiliyor}
-            className="btn-danger-ghost flex w-full items-center justify-center gap-1.5 text-xs font-medium"
+            className="btn-danger-ghost flex w-full items-center justify-center gap-1.5 text-[11.5px] font-medium"
             style={{ height: 32 }}
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -444,7 +472,7 @@ export default function Sidebar({
           </button>
         </div>
 
-        {/* Mini: yalnızca ikonlar, alt alta ortalı */}
+        {/* Mini: yalnızca ikonlar */}
         <div className="sb-mini-only flex-col items-center gap-1.5">
           <ThemeToggle mini />
           <button
